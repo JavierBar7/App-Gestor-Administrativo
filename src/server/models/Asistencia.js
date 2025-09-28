@@ -11,7 +11,6 @@ class Asistencia {
 
     async save() {
         try {
-            this.validate();
             const query = `
                 INSERT INTO asistencia 
                 (Nombres, Apellidos, Cedula, Telefono, Direccion, presente)
@@ -33,7 +32,6 @@ class Asistencia {
 
     async update() {
         try {
-            this.validate();
             const query = `
                 UPDATE asistencia 
                 SET Nombres=?, Apellidos=?, Telefono=?, Direccion=?, presente=?
@@ -53,7 +51,7 @@ class Asistencia {
         }
     }
 
-    static async finconnectionyCedula(Cedula) {
+    static async findbyCedula(Cedula) {
         try {
             const query = 'SELECT * FROM asistencia WHERE Cedula = ?';
             const [rows] = await connection.execute(query, [Cedula]);
