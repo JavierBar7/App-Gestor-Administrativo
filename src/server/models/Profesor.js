@@ -1,30 +1,18 @@
 const connection = require('../../config/database');
 
 class Profesor {
-    constructor(idProfesores, Nombres, Apellidos, Cedula, Telefono, Direccion, Especialidad, Fecha_Contratacion, Datos_Pago) {
+    constructor(idProfesores, Nombres, Apellidos){
         this.idProfesores = idProfesores;
         this.Nombres = Nombres;
         this.Apellidos = Apellidos;
-        this.Cedula = Cedula;
-        this.Telefono = Telefono;
-        this.Direccion = Direccion;
-        this.Especialidad = Especialidad;
-        this.Fecha_Contratacion = Fecha_Contratacion;
-        this.Datos_Pago = Datos_Pago;
     }
 
     async save() {
         try {
-            const query = 'INSERT INTO Profesores (Nombres, Apellidos, Cedula, Telefono, Direccion, Especialidad, Fecha_Contratacion, Datos_Pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+            const query = 'INSERT INTO Profesores (Nombres, Apellidos) VALUES (?, ?)';
             const [result] = await connection.execute(query, [
                 this.Nombres,
                 this.Apellidos,
-                this.Cedula,
-                this.Telefono,
-                this.Direccion,
-                this.Especialidad,
-                this.Fecha_Contratacion,
-                this.Datos_Pago
             ]);
             this.idProfesores = result.insertId;
             return result;
@@ -35,17 +23,10 @@ class Profesor {
 
     async update() {
         try {
-            const query = 'UPDATE Profesores SET Nombres = ?, Apellidos = ?, Cedula = ?, Telefono = ?, Direccion = ?, Especialidad = ?, Fecha_Contratacion = ?, Datos_Pago = ? WHERE idProfesores = ?';
+            const query = 'UPDATE Profesores SET Nombres = ?, Apellidos = ?';
             const [result] = await connection.execute(query, [
                 this.Nombres,
                 this.Apellidos,
-                this.Cedula,
-                this.Telefono,
-                this.Direccion,
-                this.Especialidad,
-                this.Fecha_Contratacion,
-                this.Datos_Pago,
-                this.idProfesores
             ]);
             return result;
         } catch (error) {
@@ -67,7 +48,7 @@ class Profesor {
             const [rows] = await connection.execute('SELECT * FROM Profesores WHERE idProfesores = ?', [id]);
             if (rows.length > 0) {
                 const r = rows[0];
-                return new Profesor(r.idProfesores, r.Nombres, r.Apellidos, r.Cedula, r.Telefono, r.Direccion, r.Especialidad, r.Fecha_Contratacion, r.Datos_Pago);
+                return new Profesor(r.idProfesores, r.Nombres, r.Apellidos, r.Cedula);
             }
             return null;
         } catch (error) {

@@ -1,23 +1,25 @@
 const connection = require('../../config/database');
 
 class Estudiante {
-    constructor(idEstudiantes, Nombres, Apellidos, Cedula, Telefono, Direccion) {
+    constructor(idEstudiantes, Nombres, Apellidos, Cedula, Numero, Correo, Direccion) {
         this.idEstudiantes = idEstudiantes;
         this.Nombres = Nombres;
         this.Apellidos = Apellidos;
         this.Cedula = Cedula;
-        this.Telefono = Telefono;
+        this.Numero = Numero;
+        this.Correo = Correo;
         this.Direccion = Direccion;
     }
 
     async save() {
         try {
-            const query = 'INSERT INTO Estudiantes (Nombres, Apellidos, Cedula, Telefono, Direccion) VALUES (?, ?, ?, ?, ?)';
+            const query = 'INSERT INTO Estudiantes (Nombres, Apellidos, Cedula, Numero, Correo, Direccion) VALUES (?, ?, ?, ?, ?, ?)';
             const [result] = await connection.execute(query, [
                 this.Nombres,
                 this.Apellidos,
                 this.Cedula,
-                this.Telefono,
+                this.Numero,
+                this.Correo,
                 this.Direccion
             ]);
             this.idEstudiantes = result.insertId;
@@ -29,12 +31,13 @@ class Estudiante {
     
     async update() {
         try {
-            const query = 'UPDATE Estudiantes SET Nombres = ?, Apellidos = ?, Cedula = ?, Telefono = ?, Direccion = ? WHERE idEstudiantes = ?';
+            const query = 'UPDATE Estudiantes SET Nombres = ?, Apellidos = ?, Cedula = ?, Numero = ?, Correo = ?, Direccion = ? WHERE idEstudiantes = ?';
             const [result] = await connection.execute(query, [
                 this.Nombres,
                 this.Apellidos,
                 this.Cedula,
-                this.Telefono,
+                this.Numero,
+                this.Correo,
                 this.Direccion,
                 this.idEstudiantes
             ]);
@@ -60,7 +63,7 @@ class Estudiante {
             const [rows] = await connection.execute(query, [idEstudiantes]);
             if (rows.length > 0) {
                 const row = rows[0];
-                return new Estudiante(row.idEstudiantes, row.Nombres, row.Apellidos, row.Cedula, row.Telefono, row.Direccion);
+                return new Estudiante(row.idEstudiantes, row.Nombres, row.Apellidos, row.Cedula, row.Numero, row.Correo, row.Direccion);
             }
             return null;
         } catch (error) {

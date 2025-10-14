@@ -1,12 +1,11 @@
 const connection = require('../../config/database');
 
 class Inscripcion {
-    constructor(idInscripciones, Fecha_inscripcion, Estado, Estudiantes_idEstudiantes, Grupos_idGrupos, Grupos_Profesores_idProfesores) {
+    constructor(idInscripciones, Fecha_inscripcion, idCurso,Estudiantes_idEstudiantes,) {
         this.idInscripciones = idInscripciones;
         this.Fecha_inscripcion = Fecha_inscripcion;
-        this.Estado = Estado;
+        this.idCurso =idCurso;
         this.Estudiantes_idEstudiantes = Estudiantes_idEstudiantes;
-        this.Grupos_idGrupos = Grupos_idGrupos;
         this.Grupos_Profesores_idProfesores = Grupos_Profesores_idProfesores;
     }
 
@@ -14,13 +13,12 @@ class Inscripcion {
         try {
             const query = `
                 INSERT INTO Inscripciones 
-                (Fecha_inscripcion, Estado, Estudiantes_idEstudiantes, Grupos_idGrupos, Grupos_Profesores_idProfesores) 
-                VALUES (?, ?, ?, ?, ?)`;
+                (Fecha_inscripcion, , Estudiantes_idEstudiantes,) 
+                VALUES (?, ?, ?, ?)`;
             const [result] = await connection.execute(query, [
                 this.Fecha_inscripcion,
-                this.Estado,
+                this.idCurso,
                 this.Estudiantes_idEstudiantes,
-                this.Grupos_idGrupos,
                 this.Grupos_Profesores_idProfesores
             ]);
             this.idInscripciones = result.insertId;
@@ -33,14 +31,13 @@ class Inscripcion {
     async update() {
         try {
             const query = `
-                UPDATE Inscripciones SET Fecha_inscripcion = ?, Estado = ?
-                WHERE idInscripciones = ? AND Estudiantes_idEstudiantes = ? AND Grupos_idGrupos = ? AND Grupos_Profesores_idProfesores = ?`;
+                UPDATE Inscripciones SET Fecha_inscripcion = ?,  = ?
+                WHERE idInscripciones = ? AND Estudiantes_idEstudiantes = ? AND  = ? AND Grupos_Profesores_idProfesores = ?`;
             const [result] = await connection.execute(query, [
                 this.Fecha_inscripcion,
-                this.Estado,
+                this.idCurso,
                 this.idInscripciones,
                 this.Estudiantes_idEstudiantes,
-                this.Grupos_idGrupos,
                 this.Grupos_Profesores_idProfesores
             ]);
             return result;
@@ -62,11 +59,11 @@ class Inscripcion {
         try {
             const query = `
                 SELECT * FROM Inscripciones 
-                WHERE idInscripciones = ? AND Estudiantes_idEstudiantes = ? AND Grupos_idGrupos = ? AND Grupos_Profesores_idProfesores = ?`;
+                WHERE idInscripciones = ? AND Estudiantes_idEstudiantes = ? AND  = ? AND Grupos_Profesores_idProfesores = ?`;
             const [rows] = await connection.execute(query, [idInscripciones, idEstudiante, idGrupo, idProfesor]);
             if (rows.length > 0) {
                 const r = rows[0];
-                return new Inscripcion(r.idInscripciones, r.Fecha_inscripcion, r.Estado, r.Estudiantes_idEstudiantes, r.Grupos_idGrupos, r.Grupos_Profesores_idProfesores);
+                return new Inscripcion(r.idInscripciones, r.Fecha_inscripcion, r.idCurso, r.Estudiantes_idEstudiantes,);
             }
             return null;
         } catch (error) {
@@ -78,7 +75,7 @@ class Inscripcion {
         try {
             const query = `
                 DELETE FROM Inscripciones 
-                WHERE idInscripciones = ? AND Estudiantes_idEstudiantes = ? AND Grupos_idGrupos = ? AND Grupos_Profesores_idProfesores = ?`;
+                WHERE idInscripciones = ? AND Estudiantes_idEstudiantes = ? AND idCurso = ?`;
             const [result] = await connection.execute(query, [idInscripciones, idEstudiante, idGrupo, idProfesor]);
             return result;
         } catch (error) {

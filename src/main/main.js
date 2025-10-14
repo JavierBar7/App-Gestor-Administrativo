@@ -1,22 +1,37 @@
-const { app, BrowserWindow } = require ("electron");
-const path = require ("path");
+const { app, BrowserWindow } = require('electron/main')
+const path = require('node:path')
+const isDev = require('electron-is-dev')
 
-function createWindow() {
+const createWindow = () => {
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 800,
+    height: 600,
     webPreferences: {
-      preload: path.join(__dirname, "../preload/preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false, // seguridad
+      preload: path.join(__dirname, 'preload.js'),
     },
-  });
+  })
 
-  // En desarrollo, apunta al servidor de React
-  win.loadURL("http://localhost:3000");
-
-  // En producción, carga el build de React
-  // win.loadFile(path.join(__dirname, "../renderer/dist/index.html"));
+  if (isDev) {
+    // In development, load Vite dev server (default port 5173)
+    win.loadURL('http://localhost:5173')
+  } else {
+    // In production, load the built index.html
+    win.loadFile(path.join(__dirname, '..', '..', 'dist', 'index.html'))
+  }
 }
 
-app.on("ready", createWindow);
+app.whenReady().then(() => {
+  createWindow()
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+    }
+  })
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
+})

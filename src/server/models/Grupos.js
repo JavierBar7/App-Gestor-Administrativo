@@ -1,10 +1,10 @@
 const connection = require('../../config/database');
 
 class Grupo {
-    constructor(idGrupos, idProfesores, idCursos, Horarios, Nombre_Grupo, Fecha_inicio, Estado) {
+    constructor(idGrupos, idProfesores, Curso_idCurso, Horarios, Nombre_Grupo, Fecha_inicio, Estado) {
         this.idGrupos = idGrupos;
         this.idProfesores = idProfesores;
-        this.idCursos = idCursos;
+        this.Curso_idCurso = Curso_idCurso;
         this.Horarios = Horarios;
         this.Nombre_Grupo = Nombre_Grupo;
         this.Fecha_inicio = Fecha_inicio;
@@ -13,10 +13,10 @@ class Grupo {
 
     async save() {
         try {
-            const query = 'INSERT INTO Grupos (idProfesores, idCursos, Horarios, Nombre_Grupo, Fecha_inicio, Estado) VALUES (?, ?, ?, ?, ?, ?)';
+            const query = 'INSERT INTO Grupos (idProfesores, Curso_idCurso, Horarios, Nombre_Grupo, Fecha_inicio, Estado) VALUES (?, ?, ?, ?, ?, ?)';
             const [result] = await connection.execute(query, [
                 this.idProfesores,
-                this.idCursos,
+                this.Curso_idCurso,
                 this.Horarios,
                 this.Nombre_Grupo,
                 this.Fecha_inicio,
@@ -32,7 +32,7 @@ class Grupo {
     // El update se hace sobre las 3 llaves primarias
     async update() {
         try {
-            const query = 'UPDATE Grupos SET Horarios = ?, Nombre_Grupo = ?, Fecha_inicio = ?, Estado = ? WHERE idGrupos = ? AND idProfesores = ? AND idCursos = ?';
+            const query = 'UPDATE Grupos SET Horarios = ?, Nombre_Grupo = ?, Fecha_inicio = ?, Estado = ? WHERE idGrupos = ? AND idProfesores = ? AND Curso_idCurso = ?';
             const [result] = await connection.execute(query, [
                 this.Horarios,
                 this.Nombre_Grupo,
@@ -40,7 +40,7 @@ class Grupo {
                 this.Estado,
                 this.idGrupos,
                 this.idProfesores,
-                this.idCursos
+                this.Curso_idCurso
             ]);
             return result;
         } catch (error) {
@@ -57,13 +57,13 @@ class Grupo {
         }
     }
 
-    static async findByIds(idGrupos, idProfesores, idCursos) {
+    static async findByIds(idGrupos, idProfesores, Curso_idCurso) {
         try {
-            const query = 'SELECT * FROM Grupos WHERE idGrupos = ? AND idProfesores = ? AND idCursos = ?';
-            const [rows] = await connection.execute(query, [idGrupos, idProfesores, idCursos]);
+            const query = 'SELECT * FROM Grupos WHERE idGrupos = ? AND idProfesores = ? AND Curso_idCurso = ?';
+            const [rows] = await connection.execute(query, [idGrupos, idProfesores, Curso_idCurso]);
              if (rows.length > 0) {
                 const r = rows[0];
-                return new Grupo(r.idGrupos, r.idProfesores, r.idCursos, r.Horarios, r.Nombre_Grupo, r.Fecha_inicio, r.Estado);
+                return new Grupo(r.idGrupos, r.idProfesores, r.Curso_idCurso, r.Horarios, r.Nombre_Grupo, r.Fecha_inicio, r.Estado);
             }
             return null;
         } catch (error) {
@@ -71,10 +71,10 @@ class Grupo {
         }
     }
     
-    static async deleteByIds(idGrupos, idProfesores, idCursos) {
+    static async deleteByIds(idGrupos, idProfesores, Curso_idCurso) {
         try {
-            const query = 'DELETE FROM Grupos WHERE idGrupos = ? AND idProfesores = ? AND idCursos = ?';
-            const [result] = await connection.execute(query, [idGrupos, idProfesores, idCursos]);
+            const query = 'DELETE FROM Grupos WHERE idGrupos = ? AND idProfesores = ? AND Curso_idCurso = ?';
+            const [result] = await connection.execute(query, [idGrupos, idProfesores, Curso_idCurso]);
             return result;
         } catch (error) {
             throw new Error(`Error al eliminar el grupo: ${error.message}`);
