@@ -1,11 +1,10 @@
 const connection = require('../../config/database');
 
 class Grupo {
-    constructor(idGrupos, idProfesores, Curso_idCurso, Horarios, Nombre_Grupo, Fecha_inicio, Estado) {
+    constructor(idGrupos, idProfesores, Curso_idCurso, Nombre_Grupo, Fecha_inicio, Estado) {
         this.idGrupos = idGrupos;
         this.idProfesores = idProfesores;
         this.Curso_idCurso = Curso_idCurso;
-        this.Horarios = Horarios;
         this.Nombre_Grupo = Nombre_Grupo;
         this.Fecha_inicio = Fecha_inicio;
         this.Estado = Estado;
@@ -13,11 +12,10 @@ class Grupo {
 
     async save() {
         try {
-            const query = 'INSERT INTO Grupos (idProfesores, Curso_idCurso, Horarios, Nombre_Grupo, Fecha_inicio, Estado) VALUES (?, ?, ?, ?, ?, ?)';
+            const query = 'INSERT INTO Grupos (idProfesores, Curso_idCurso, , Nombre_Grupo, Fecha_inicio, Estado) VALUES (?, ?, ?, ?, ?)';
             const [result] = await connection.execute(query, [
                 this.idProfesores,
                 this.Curso_idCurso,
-                this.Horarios,
                 this.Nombre_Grupo,
                 this.Fecha_inicio,
                 this.Estado
@@ -32,9 +30,8 @@ class Grupo {
     // El update se hace sobre las 3 llaves primarias
     async update() {
         try {
-            const query = 'UPDATE Grupos SET Horarios = ?, Nombre_Grupo = ?, Fecha_inicio = ?, Estado = ? WHERE idGrupos = ? AND idProfesores = ? AND Curso_idCurso = ?';
+            const query = 'UPDATE Grupos SET  = ?, Nombre_Grupo = ?, Fecha_inicio = ?, Estado = ? WHERE idGrupos = ? AND idProfesores = ? AND Curso_idCurso = ?';
             const [result] = await connection.execute(query, [
-                this.Horarios,
                 this.Nombre_Grupo,
                 this.Fecha_inicio,
                 this.Estado,
@@ -61,9 +58,9 @@ class Grupo {
         try {
             const query = 'SELECT * FROM Grupos WHERE idGrupos = ? AND idProfesores = ? AND Curso_idCurso = ?';
             const [rows] = await connection.execute(query, [idGrupos, idProfesores, Curso_idCurso]);
-             if (rows.length > 0) {
+            if (rows.length > 0) {
                 const r = rows[0];
-                return new Grupo(r.idGrupos, r.idProfesores, r.Curso_idCurso, r.Horarios, r.Nombre_Grupo, r.Fecha_inicio, r.Estado);
+                return new Grupo(r.idGrupos, r.idProfesores, r.Curso_idCurso, r.Nombre_Grupo, r.Fecha_inicio, r.Estado);
             }
             return null;
         } catch (error) {
