@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Just Talk Academy</title>
+    <link rel="stylesheet" href="../public/dashboard.css">
+    
+    <script src="../dashboard.js"></script> 
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Just Talk Academy</h2>
+            </div>
+            <nav class="nav-menu">
+                <ul>
+                    <li class="active"><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
+                    <li><a href="#" id="logout-btn">Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content-area">
+            <h1>Gestión de Usuarios</h1>
+
+            <div class="user-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Contraseña</th>
+                            <th>Rol</th>
+                            <th>Fecha de Creación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body">
+                        </tbody>
+                </table>
+                <p id="no-users-message" class="info-message" style="display: none;">No hay usuarios registrados.</p>
+            </div>
+        </main>
+    </div>
+
+    <div id="edit-user-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Editar Contraseña</h2>
+            <form id="edit-user-form">
+                <div class="input-group">
+                    <label for="modal-username">Usuario:</label>
+                    <input type="text" id="modal-username" readonly>
+                </div>
+                <div class="input-group">
+                    <label for="modal-new-password">Nueva Contraseña:</label>
+                    <input type="password" id="modal-new-password" required>
+                </div>
+                <button type="submit">Guardar Cambios</button>
+                <p id="modal-error-message" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="../dashboard.js"></script>
+</body>
+</html>

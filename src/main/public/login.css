@@ -1,0 +1,182 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    width: 1000px; /* Ancho de la ventana de tu app */
+    height: 600px; /* Alto de la ventana de tu app */
+    min-width: 900px;
+    min-height: 500px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* Panel Izquierdo: Ahora la imagen será el fondo completo */
+.left-panel {
+    width: 40%;
+    /* Removido: background: linear-gradient(to bottom right, #00C853, #40C4FF, #80DEEA); */
+    background-color: #ffffff; /* Un color de fallback si la imagen no carga */
+    color: white; /* El texto debe ser visible sobre tu imagen */
+    display: flex;
+    flex-direction: column;
+    /* Ajusta estos si necesitas centrar el contenido (logo y texto) sobre la imagen */
+    justify-content: center; /* O space-between si tienes más elementos */
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Imagen de Fondo para el Panel Izquierdo */
+.left-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Asegúrate de que esta URL sea la de tu imagen de estudiantes */
+    background-image: url('Diseño.png'); /* ¡Usa el nombre correcto de tu imagen! */
+    background-size: cover; /* Cubre todo el espacio manteniendo la proporción */
+    background-position: center; /* Centra la imagen */
+    background-repeat: no-repeat;
+    z-index: 0; /* Asegura que esté detrás del contenido */
+}
+
+/* Eliminar la segunda forma geométrica (si la tenías) */
+.left-panel::after {
+    display: none; /* O remueve esta regla por completo */
+}
+
+/* Ajustes para que el contenido (logo, título, descripción) se vea sobre la imagen */
+.left-panel .logo,
+.left-panel .content {
+    position: relative; /* Para que estén encima de la imagen de fondo */
+    z-index: 1; /* Asegura que estén encima del pseudo-elemento ::before */
+    /* Si el texto no se ve, considera un overlay oscuro o cambiar el color del texto */
+    color: black; /* Cambiar a negro si la imagen es clara, o usar un overlay */
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6); /* Opcional: sombra para que el texto resalte */
+}
+
+/* Asegúrate de que el logo tenga el color adecuado para tu imagen */
+.left-panel .logo img {
+    width: 50px;
+    height: auto;
+    filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); /* Opcional: sombra para el logo */
+}
+
+
+.left-panel h1 {
+    font-size: 2.2em;
+    margin-bottom: 10px;
+    color: white; /* O el color que mejor contraste con tu imagen */
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.left-panel p {
+    font-size: 0.9em;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    color: white; /* O el color que mejor contraste con tu imagen */
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Si tu imagen ya es la de los estudiantes, no necesitas este .computer-img */
+.left-panel .computer-img {
+    display: none; /* O remueve esta regla y la imagen del HTML si no es necesaria */
+}
+
+/* --- El resto del CSS para .right-panel, .login-box, etc. se mantiene igual --- */
+
+/* Panel Derecho (Login Form) */
+.right-panel {
+    width: 60%;
+    background-color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+}
+
+.login-box {
+    text-align: center;
+    width: 80%;
+    max-width: 350px;
+}
+
+.login-box h2 {
+    font-size: 1.8em;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.input-group input[type="text"],
+.input-group input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box; /* Incluye padding y borde en el ancho */
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #40C4FF; /* Color de tu paleta */
+    box-shadow: 0 0 5px rgba(64, 196, 255, 0.3);
+}
+
+button[type="submit"] {
+    background-color: #40C4FF; /* Color de tu paleta */
+    color: white;
+    padding: 14px 25px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+button[type="submit"]:hover {
+    background-color: #00C853; 
+}
+
+.error-message {
+    color: #e74c3c;
+    margin-top: 15px;
+    font-size: 0.9em;
+    visibility: hidden; 
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.error-message.visible {
+    visibility: visible;
+    opacity: 1;
+}
