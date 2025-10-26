@@ -1,14 +1,17 @@
-/* eslint-disable no-undef */
-const express = require("express");
-const cors = require("cors");
-
+// server.js
+const express = require('express');
+const path = require('path');
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-// Ejemplo de ruta
-app.get("/ping", (req, res) => {
-    res.json({ message: "pong" });
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'app/views')); // Carpeta donde están tus .ejs
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public'))); // CSS, JS, imágenes
+
+app.get('/', (req, res) => {
+    res.render('login'); // renderiza login.ejs
 });
 
-app.listen(5000, () => console.log("API running on http://localhost:5000"));
+app.listen(3000, () => console.log('Servidor corriendo en http://localhost:3000'));
