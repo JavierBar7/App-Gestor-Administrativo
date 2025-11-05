@@ -1,4 +1,5 @@
-const conn = require('../../config/database');
+const conn = require('../../config/database'); 
+
 
 class Usuario {
 
@@ -32,25 +33,21 @@ class Usuario {
         }
     }
 
+    static async update(username, newPassword, newRol) {
+        try {
+            const [result] = await conn.promise().query(
+                'UPDATE Usuario SET password = ?, rol = ? WHERE username = ?',
+                [newPassword, newRol, username]
+            );
+            return result.affectedRows > 0;
+        } catch (error) {
+            console.error('Error actualizando usuario', error);
+            throw error;
+        }
+    }
+
 }
 
 module.exports = {Usuario};
 
 
-
-    /*static async findByUsernameAndPassword(username, password) {
-        const [rows] = await db.query(
-            `SELECT u.id, u.username, u.password, r.rolName 
-                FROM Usuario u 
-                JOIN Rol r ON u.rol_id = r.id 
-                WHERE u.username = ? AND u.password = ?`,
-            [username, password]
-        );
-        return rows[0]; 
-    }
-
-    static async updateLastLogin(userId) {
-        await db.query('UPDATE Usuario SET last_login = NOW() WHERE id = ?', [userId]);
-    }
-
-}*/

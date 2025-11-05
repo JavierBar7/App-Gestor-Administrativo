@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Just Talk Academy</title>
-    <link rel="stylesheet" href="../../public/login.css">
+    <link rel="stylesheet" href="../../public/gestion.css">
     
 </head>
 <body>
@@ -56,12 +56,19 @@
                     <label for="modal-new-password">Nueva Contraseña:</label>
                     <input type="password" id="modal-new-password" required>
                 </div>
+                <div class="input-group">
+                    <label for="moodal-new-rol">Rol</label>
+                    <select name="rol" id="rol">
+                        <option value="Admin">Administrador</option>
+                        <option value="Gestor">Gestor</option>
+                    </select>
+                </div>
                 <button type="submit">Guardar Cambios</button>
                 <p id="modal-error-message" class="error-message"></p>
             </form>
         </div>
     </div>
 
-    <script src="../../public/js/dashboard.js"></script>
+    <script src="../../public/js/gestion.js"></script>
 </body>
 </html>
