@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudiantes - Just Talk Academy</title>
+    <link rel="stylesheet" href="../../public/gestion.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Just Talk Academy</h2>
+            </div>
+            <nav class="nav-menu">
+                <ul>
+                    <li><a href="#" id="back-to-gestion">Volver</a></li>
+                    <li><a href="#" id="logout-btn">Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content-area">
+            <h1>Estudiantes</h1>
+
+            <div style="margin: 12px 0;">
+                <button id="add-student-btn">Agregar Estudiante</button>
+            </div>
+
+            <div class="user-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombres</th>
+                            <th>Apellidos</th>
+                            <th>Cédula</th>
+                            <th>Fecha Nacimiento</th>
+                            <th>Teléfono</th>
+                            <th>Correo</th>
+                            <th>Dirección</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-table-body"></tbody>
+                </table>
+                <p id="no-students-message" class="info-message" style="display: none;">No hay estudiantes registrados.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para agregar estudiante (reutilizable) -->
+    <div id="add-student-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-button" id="close-add-student">&times;</span>
+            <h2>Agregar Estudiante</h2>
+            <form id="add-student-form">
+                <div class="input-group">
+                    <label>Nombres</label>
+                    <input type="text" id="est-Nombres" required>
+                </div>
+                <div class="input-group">
+                    <label>Apellidos</label>
+                    <input type="text" id="est-Apellidos" required>
+                </div>
+                <div class="input-group">
+                    <label>Cédula</label>
+                    <input type="text" id="est-Cedula" required>
+                </div>
+                <div class="input-group">
+                    <label>Fecha de Nacimiento</label>
+                    <input type="date" id="est-Fecha_Nacimiento" required>
+                </div>
+                <div class="input-group">
+                    <label>Teléfono</label>
+                    <input type="text" id="est-Telefono">
+                </div>
+                <div class="input-group">
+                    <label>Correo</label>
+                    <input type="email" id="est-Correo">
+                </div>
+                <div class="input-group">
+                    <label>Dirección</label>
+                    <input type="text" id="est-Direccion">
+                </div>
+
+                <div id="representante-section" style="display:none; border-top:1px solid #ddd; padding-top:10px; margin-top:10px;">
+                    <h3>Datos del representante (requerido si menor de edad)</h3>
+                    <div class="input-group">
+                        <label>Nombres</label>
+                        <input type="text" id="rep-Nombres">
+                    </div>
+                    <div class="input-group">
+                        <label>Apellidos</label>
+                        <input type="text" id="rep-Apellidos">
+                    </div>
+                    <div class="input-group">
+                        <label>Cédula</label>
+                        <input type="text" id="rep-Cedula">
+                    </div>
+                    <div class="input-group">
+                        <label>Parentesco</label>
+                        <input type="text" id="rep-Parentesco">
+                    </div>
+                    <div class="input-group">
+                        <label>Teléfono representante</label>
+                        <input type="text" id="rep-Telefono">
+                    </div>
+                    <div class="input-group">
+                        <label>Correo representante</label>
+                        <input type="email" id="rep-Correo">
+                    </div>
+                </div>
+
+                <div class="input-group" style="margin-top:10px;">
+                    <label>ID Curso (para inscripción)</label>
+                    <input type="number" id="ins-idCurso">
+                </div>
+
+                <button type="submit">Guardar Estudiante</button>
+                <p id="add-student-error" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../public/js/estudiantes.js"></script>
+</body>
+</html>

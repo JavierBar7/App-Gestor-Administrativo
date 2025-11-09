@@ -86,3 +86,11 @@ ipcMain.on('logout', (event) => {
         win.loadFile(path.join(__dirname, 'src/views/login.html')); // 👈 vuelve al login
     }
 });
+
+// Navegar a vista de estudiantes
+ipcMain.on('navigate-estudiantes', (event) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+        win.loadFile(path.join(__dirname, 'src/views/estudiantes.html'));
+    }
+});

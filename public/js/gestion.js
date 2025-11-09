@@ -175,6 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.electronAPI.logout();
     });
 
+    // Navegar a la vista de estudiantes
+    const viewStudentsBtn = document.getElementById('view-students-btn');
+    if (viewStudentsBtn) viewStudentsBtn.addEventListener('click', (e) => { e.preventDefault(); window.electronAPI.navigateToEstudiantes(); });
+
     closeModalBtn.addEventListener('click', () => {
         editUserModal.style.display = 'none';
     });
