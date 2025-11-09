@@ -1,16 +1,15 @@
 const {Usuario} = require('../models/Usuario');
 
-const login = async (req,res) => {
+const login = async (req, res) => {
     try {
-        const {username, password} = req.body;
+        const { username, password } = req.body;
+        // Pasamos los valores recibidos al modelo
         const user = await Usuario.findUserAndPassword(username, password);
 
         if (!user) {
             return res.json({ success: false, message: 'Usuario o contraseña incorrectos' });
         }
 
-        await Usuario.updateLastLogin(user.id);
-        
         return res.json({ success: true, role: user.rolName });
     } catch (error) {
         console.error('Error en login:', error);

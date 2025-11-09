@@ -1,47 +1,42 @@
-const conn = require('../../config/database'); 
+const conn = require('../../config/database');
 
 
 class Usuario {
 
-    constructor(username, password) {
-        this.username = username;
-        this.password = password;
+    constructor(Nombre_Usuario, Clave) {
+        this.Nombre_Usuario = Nombre_Usuario;
+        this.Clave = Clave;
     }
 
-    static async findUserAndPassword(username, password) {
+    // Busca un usuario por Nombre_Usuario y Clave (los nombres de columnas corresponden a la tabla `usuarios`)
+    static async findUserAndPassword(Nombre_Usuario, Clave) {
         try {
             const [rows] = await conn.promise().query(
-                'SELECT u.id, u.username, u.password, r.rolName FROM Usuario u JOIN Rol r ON u.rol_id = r.id WHERE u.username = ? AND u.password = ?',
-                [username, password] 
+                `SELECT u.idUsuario AS idUsuario, u.Nombre_Usuario, u.Clave, r.Nombre_Rol AS rolName
+                FROM usuarios u
+                JOIN roles r ON u.idRol = r.idRol
+                WHERE u.Nombre_Usuario = ? AND u.Clave = ?`,
+                [Nombre_Usuario, Clave]
             );
             return rows[0];
         } catch (error) {
-            console.error('Error al validar datos', error);
+            console.error('Error al validar datos (Usuario.findUserAndPassword)', error);
             throw error;
         }
     }
 
-    static async updateLastLogin(userId) {
-        try {
-            await conn.promise().query(
-                'UPDATE Usuario SET last_login = NOW() WHERE id = ?',
-                [userId]
-            );
-        } catch (error) {
-            console.error('Error al actualizar last_login', error);
-            throw error;
-        }
-    }
 
-    static async update(username, newPassword, newRol) {
+
+    // Actualiza la clave y el rol (usa idRol en la tabla real)
+    static async update(Nombre_Usuario, newClave, newIdRol) {
         try {
             const [result] = await conn.promise().query(
-                'UPDATE Usuario SET password = ?, rol = ? WHERE username = ?',
-                [newPassword, newRol, username]
+                'UPDATE usuarios SET Clave = ?, idRol = ? WHERE Nombre_Usuario = ?',
+                [newClave, newIdRol, Nombre_Usuario]
             );
             return result.affectedRows > 0;
         } catch (error) {
-            console.error('Error actualizando usuario', error);
+            console.error('Error actualizando usuario (Usuario.update)', error);
             throw error;
         }
     }

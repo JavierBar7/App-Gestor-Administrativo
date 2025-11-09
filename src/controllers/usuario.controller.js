@@ -1,11 +1,12 @@
 const { Usuario } = require('../models/Usuario');
 
+// Obtiene lista de usuarios (solo campos seguros para mostrar en la UI)
 exports.getUsers = async (req, res) => {
     try {
         const [rows] = await require('../../config/database').promise().query(
-            `SELECT u.username, u.password, r.rolName AS rol, 'N/A' AS createdAt
-             FROM Usuario u
-             JOIN Rol r ON u.rol_id = r.id`
+            `SELECT u.idUsuario AS idUsuario, u.Nombre_Usuario AS Nombre_Usuario, r.Nombre_Rol AS rol
+             FROM usuarios u
+             JOIN roles r ON u.idRol = r.idRol`
         );
         res.json(rows);
     } catch (error) {
@@ -19,6 +20,7 @@ exports.updateUser = async (req, res) => {
     const { newPassword, newRol } = req.body;
 
     try {
+        // newRol debe ser el idRol (entero) en la tabla `roles`
         const success = await Usuario.update(username, newPassword, newRol);
         if (success) {
             res.json({ success: true, message: 'Usuario actualizado correctamente' });

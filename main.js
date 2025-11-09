@@ -62,6 +62,11 @@ ipcMain.handle('login-attempt', async (event, username, password) => {
         const response = await axios.post('http://localhost:3000/api/auth/login', { username, password });
         return response.data;
     } catch (error) {
+        // Si el servidor respondió con un error 5xx/4xx, devolver el cuerpo de la respuesta
+        if (error.response) {
+            console.error('Error en login-attempt:', error.response.status, error.response.data);
+            return error.response.data;
+        }
         console.error('Error en login-attempt:', error.message);
         return { success: false, message: 'Error al conectar con el servidor' };
     }

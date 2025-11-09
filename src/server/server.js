@@ -14,8 +14,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Montar rutas de autenticación
 const loginRoutes = require('../routes/loginRoutes');
 const userRoutes = require('../routes/usuarioRoutes')
+const estudianteRoutes = require('../routes/estudianteRoutes');
 app.use('/api/auth', loginRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/estudiantes', estudianteRoutes);
 
 app.get('/', (req, res) => {
     res.render('login'); 

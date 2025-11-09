@@ -12,6 +12,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentEditingUser = null;
 
+    // -- Estudiantes: modal y formulario para agregar
+    const addStudentBtn = document.getElementById('add-student-btn');
+    const addStudentModal = document.getElementById('add-student-modal');
+    const closeAddStudentBtn = document.getElementById('close-add-student');
+    const addStudentForm = document.getElementById('add-student-form');
+    const representanteSection = document.getElementById('representante-section');
+
+    function calcularEdad(fechaStr) {
+        const hoy = new Date();
+        const fecha = new Date(fechaStr);
+        let edad = hoy.getFullYear() - fecha.getFullYear();
+        const m = hoy.getMonth() - fecha.getMonth();
+        if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) {
+            edad--;
+        }
+        return edad;
+    }
+
+    if (addStudentBtn) {
+        addStudentBtn.addEventListener('click', () => {
+            addStudentModal.style.display = 'flex';
+        });
+    }
+
+    if (closeAddStudentBtn) {
+        closeAddStudentBtn.addEventListener('click', () => {
+            addStudentModal.style.display = 'none';
+        });
+    }
+
+    // Mostrar/ocultar datos de representante según fecha
+    const fechaNacimientoInput = document.getElementById('est-Fecha_Nacimiento');
+    if (fechaNacimientoInput) {
+        fechaNacimientoInput.addEventListener('change', () => {
+            const fecha = fechaNacimientoInput.value;
+            if (!fecha) return;
+            const edad = calcularEdad(fecha);
+            if (edad < 18) {
+                representanteSection.style.display = 'block';
+            } else {
+                representanteSection.style.display = 'none';
+            }
+        });
+    }
+
+    if (addStudentForm) {
+        addStudentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            document.getElementById('add-student-error').classList.remove('visible');
+            const payload = {
+                Nombres: document.getElementById('est-Nombres').value,
+                Apellidos: document.getElementById('est-Apellidos').value,
+                Cedula: document.getElementById('est-Cedula').value,
+                Fecha_Nacimiento: document.getElementById('est-Fecha_Nacimiento').value,
+                Telefono: document.getElementById('est-Telefono').value,
+                Correo: document.getElementById('est-Correo').value,
+                Direccion: document.getElementById('est-Direccion').value,
+                idCurso: document.getElementById('ins-idCurso').value || null
+            };
+
+            const edad = calcularEdad(payload.Fecha_Nacimiento);
+            if (edad < 18) {
+                // añadir representante
+                payload.representante = {
+                    Nombres: document.getElementById('rep-Nombres').value,
+                    Apellidos: document.getElementById('rep-Apellidos').value,
+                    Cedula: document.getElementById('rep-Cedula').value,
+                    Parentesco: document.getElementById('rep-Parentesco').value,
+                    Telefono: document.getElementById('rep-Telefono').value,
+                    Correo: document.getElementById('rep-Correo').value
+                };
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/estudiantes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Estudiante creado correctamente');
+                    addStudentModal.style.display = 'none';
+                    // opcional: recargar lista de usuarios/estudiantes
+                    loadUsers();
+                } else {
+                    const errEl = document.getElementById('add-student-error');
+                    errEl.textContent = result.message || 'Error al crear estudiante';
+                    errEl.classList.add('visible');
+                }
+            } catch (err) {
+                console.error('Error creando estudiante:', err);
+                const errEl = document.getElementById('add-student-error');
+                errEl.textContent = 'Error al conectar con el servidor';
+                errEl.classList.add('visible');
+            }
+        });
+    }
+
     async function loadUsers() {
         try {
             const response = await fetch('http://localhost:3000/api/users');
@@ -26,15 +125,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             users.forEach(user => {
+                // API returns Nombre_Usuario and rol (Nombre_Rol) per server controller
+                const username = user.Nombre_Usuario || user.username || '';
+                const rol = user.rol || user.Nombre_Rol || '';
+                const createdAt = user.createdAt || 'N/A';
+
                 const row = userTableBody.insertRow();
                 row.innerHTML = `
-                    <td>${user.username}</td>
-                    <td>**********${user.password.slice(-2)}</td>
-                    <td>${user.rol}</td>
-                    <td>${user.createdAt}</td>
+                    <td>${username}</td>
+                    <td>********</td>
+                    <td>${rol}</td>
+                    <td>${createdAt}</td>
                     <td class="action-buttons">
-                        <button class="edit-btn" data-username="${user.username}">Editar</button>
-                        <button class="delete-btn" data-username="${user.username}">Borrar</button>
+                        <button class="edit-btn" data-username="${username}">Editar</button>
+                        <button class="delete-btn" data-username="${username}">Borrar</button>
                     </td>
                 `;
             });
