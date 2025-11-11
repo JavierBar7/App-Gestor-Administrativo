@@ -18,6 +18,11 @@ const estudianteRoutes = require('../routes/estudianteRoutes');
 app.use('/api/auth', loginRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/estudiantes', estudianteRoutes);
+// Rutas para cursos y grupos
+const cursoRoutes = require('../routes/cursoRoutes');
+const grupoRoutes = require('../routes/grupoRoutes');
+app.use('/api/cursos', cursoRoutes);
+app.use('/api/grupos', grupoRoutes);
 
 app.get('/', (req, res) => {
     res.render('login'); 

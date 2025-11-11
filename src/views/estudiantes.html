@@ -25,6 +25,7 @@
 
             <div style="margin: 12px 0;">
                 <button id="add-student-btn">Agregar Estudiante</button>
+                <button id="add-curso-grupo-btn">Agregar Curso/Grupo</button>
             </div>
 
             <div class="user-table-container">
@@ -123,6 +124,59 @@
         </div>
     </div>
 
+    <!-- Modal para Crear Curso / Grupo (tabs) -->
+    <div id="curso-grupo-modal" class="modal" style="display:none;">
+        <div class="modal-content large">
+            <span class="close-button" id="close-curso-grupo">&times;</span>
+            <h2>Crear Curso o Grupo</h2>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-curso">Crear Curso</button>
+                <button class="tab-btn" data-tab="tab-grupo">Crear Grupo</button>
+            </div>
+
+            <div id="tab-curso" class="tab active">
+                <form id="form-curso">
+                    <div class="input-group">
+                        <label>Nombre del Curso</label>
+                        <input type="text" id="curso-Nombre_Curso" required maxlength="50">
+                    </div>
+                    <div class="input-group">
+                        <label>Descripción</label>
+                        <input type="text" id="curso-Descripcion_Curso" maxlength="50">
+                    </div>
+                    <button type="submit">Crear Curso</button>
+                    <p id="curso-msg" class="info-message"></p>
+                </form>
+            </div>
+
+            <div id="tab-grupo" class="tab" style="display:none;">
+                <form id="form-grupo">
+                    <div class="input-group">
+                        <label>Curso</label>
+                        <select id="grupo-idCurso" required>
+                            <option value="">-- Seleccione un curso --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Nombre del Grupo</label>
+                        <input type="text" id="grupo-Nombre_Grupo" required maxlength="50">
+                    </div>
+                    <div class="input-group">
+                        <label>Fecha inicio</label>
+                        <input type="datetime-local" id="grupo-Fecha_inicio">
+                    </div>
+                    <div class="input-group">
+                        <label>Estado</label>
+                        <input type="text" id="grupo-Estado" maxlength="50">
+                    </div>
+                    <button type="submit">Crear Grupo</button>
+                    <p id="grupo-msg" class="info-message"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="../../public/js/estudiantes.js"></script>
+    <script src="../../public/js/cursosGrupos.js"></script>
 </body>
 </html>
