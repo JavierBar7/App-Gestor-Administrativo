@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudiantes - Just Talk Academy</title>
+    <link rel="stylesheet" href="../../public/gestion.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="Logo Just Talk Academy" class="sidebar-logo">
+                <h2>Just Talk</h2>
+                <h2>Academy</h2>
+            </div>
+            <nav class="nav-menu">
+                <ul>
+                    <li><a href="#" id="back-to-gestion">Volver</a></li>
+                    <li><a href="#" id="logout-btn">Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content-area">
+            <h1>Estudiantes</h1>
+
+            <div style="margin: 12px 0;">
+                <button id="add-student-btn">Agregar Estudiante</button>
+                <button id="add-curso-grupo-btn">Agregar Curso/Grupo</button>
+            </div>
+
+            <div class="user-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombres</th>
+                            <th>Apellidos</th>
+                            <th>Cédula</th>
+                            <th>Fecha Nacimiento</th>
+                            <th>Teléfono</th>
+                            <th>Correo</th>
+                            <th>Dirección</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-table-body"></tbody>
+                </table>
+                <p id="no-students-message" class="info-message" style="display: none;">No hay estudiantes registrados.</p>
+            </div>
+        </main>
+    </div>
+
+    <div id="add-student-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-button" id="close-add-student">&times;</span>
+            <h2 id="student-modal-title">Agregar Estudiante</h2>
+            <form id="add-student-form">
+                <div class="input-group">
+                    <label>Nombres</label>
+                    <input type="text" id="est-Nombres" required>
+                </div>
+                <div class="input-group">
+                    <label>Apellidos</label>
+                    <input type="text" id="est-Apellidos" required>
+                </div>
+                <div class="input-group">
+                    <label>Cédula</label>
+                    <input type="text" id="est-Cedula" required>
+                </div>
+                <div class="input-group">
+                    <label>Fecha de Nacimiento</label>
+                    <input type="date" id="est-Fecha_Nacimiento" required>
+                </div>
+                <div class="input-group">
+                    <label>Teléfono</label>
+                    <input type="text" id="est-Telefono">
+                </div>
+                <div class="input-group">
+                    <label>Correo</label>
+                    <input type="email" id="est-Correo">
+                </div>
+                <div class="input-group">
+                    <label>Dirección</label>
+                    <input type="text" id="est-Direccion">
+                </div>
+
+                <div id="representante-section" style="display:none; border-top:1px solid #ddd; padding-top:10px; margin-top:10px;">
+                    <h3>Datos del representante (requerido si menor de edad)</h3>
+                    <div class="input-group">
+                        <label>Nombres</label>
+                        <input type="text" id="rep-Nombres">
+                    </div>
+                    <div class="input-group">
+                        <label>Apellidos</label>
+                        <input type="text" id="rep-Apellidos">
+                    </div>
+                    <div class="input-group">
+                        <label>Cédula</label>
+                        <input type="text" id="rep-Cedula">
+                    </div>
+                    <div class="input-group">
+                        <label>Parentesco</label>
+                        <input type="text" id="rep-Parentesco">
+                    </div>
+                    <div class="input-group">
+                        <label>Teléfono representante</label>
+                        <input type="text" id="rep-Telefono">
+                    </div>
+                    <div class="input-group">
+                        <label>Correo representante</label>
+                        <input type="email" id="rep-Correo">
+                    </div>
+                </div>
+
+                <div class="input-group" style="margin-top:10px;">
+                    <label>Grupo (para inscripción)</label>
+                    <select id="ins-idGrupo">
+                        <option value="">-- Seleccione un grupo --</option>
+                    </select>
+                </div>
+
+                <button type="submit">Guardar Estudiante</button>
+                <p id="add-student-error" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="curso-grupo-modal" class="modal" style="display:none;">
+        <div class="modal-content large">
+            <span class="close-button" id="close-curso-grupo">&times;</span>
+            <h2>Crear Curso o Grupo</h2>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-curso">Crear Curso</button>
+                <button class="tab-btn" data-tab="tab-grupo">Crear Grupo</button>
+            </div>
+
+            <div id="tab-curso" class="tab active">
+                <form id="form-curso">
+                    <div class="input-group">
+                        <label>Nombre del Curso</label>
+                        <input type="text" id="curso-Nombre_Curso" required maxlength="50">
+                    </div>
+                    <div class="input-group">
+                        <label>Descripción</label>
+                        <input type="text" id="curso-Descripcion_Curso" maxlength="50">
+                    </div>
+                    <button type="submit">Crear Curso</button>
+                    <p id="curso-msg" class="info-message"></p>
+                </form>
+            </div>
+
+            <div id="tab-grupo" class="tab" style="display:none;">
+                <form id="form-grupo">
+                    <div class="input-group">
+                        <label>Curso</label>
+                        <select id="grupo-idCurso" required>
+                            <option value="">-- Seleccione un curso --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Nombre del Grupo</label>
+                        <input type="text" id="grupo-Nombre_Grupo" required maxlength="50">
+                    </div>
+                    <div class="input-group">
+                        <label>Fecha inicio</label>
+                        <input type="datetime-local" id="grupo-Fecha_inicio">
+                    </div>
+                    <div class="input-group">
+                        <label>Estado</label>
+                        <input type="text" id="grupo-Estado" maxlength="50">
+                    </div>
+                    <button type="submit">Crear Grupo</button>
+                    <p id="grupo-msg" class="info-message"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../public/js/estudiantes.js"></script>
+    <script src="../../public/js/cursosGrupos.js"></script>
+</body>
+</html>

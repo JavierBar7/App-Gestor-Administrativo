@@ -1,0 +1,23 @@
+/* eslint-disable no-undef */
+const mysql = require('mysql2')
+const dotenv = require ('dotenv')
+dotenv.config()
+
+// Support both DB_NAME and DB_DATABASE env var names to be flexible
+const connection = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || process.env.DB_DATABASE
+})
+
+connection.connect((err) => {
+    if (err) {
+        console.error('❌ Error al conectar a la base de datos:', err.message);
+    } else {
+        console.log('✅ Conectado a la base de datos MySQL');
+    }
+});
+
+module.exports= connection
+

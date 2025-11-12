@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Just Talk Academy</title>
+    <link rel="stylesheet" href="../../public/gestion.css">
+    
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="Logo Just Talk Academy" class="sidebar-logo">
+                <h2>Just Talk</h2>
+                <h2>Academy</h2>
+            </div>
+            <nav class="nav-menu">
+                <ul>
+                    <li class="active"><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
+                    <li><a href="#" id="view-students-btn">Estudiantes</a></li>
+                    <li><a href="#" id="view-cursos-btn">Cursos</a></li>
+                    <li><a href="#" id="logout-btn">Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content-area">
+            <h1>Gestión de Usuarios</h1>
+
+            <!-- Para agregar estudiantes usa la vista específica de Estudiantes -->
+
+            <div class="user-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Contraseña</th>
+                            <th>Rol</th>
+                            <th>Fecha de Creación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body">
+                        </tbody>
+                </table>
+                <p id="no-users-message" class="info-message" style="display: none;">No hay usuarios registrados.</p>
+            </div>
+
+                <!-- Modal para agregar estudiante -->
+                <div id="add-student-modal" class="modal" style="display:none;">
+                    <div class="modal-content">
+                        <span class="close-button" id="close-add-student">&times;</span>
+                        <h2>Agregar Estudiante</h2>
+                        <form id="add-student-form">
+                            <div class="input-group">
+                                <label>Nombres</label>
+                                <input type="text" id="est-Nombres" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Apellidos</label>
+                                <input type="text" id="est-Apellidos" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Cédula</label>
+                                <input type="text" id="est-Cedula" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Fecha de Nacimiento</label>
+                                <input type="date" id="est-Fecha_Nacimiento" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Teléfono</label>
+                                <input type="text" id="est-Telefono">
+                            </div>
+                            <div class="input-group">
+                                <label>Correo</label>
+                                <input type="email" id="est-Correo">
+                            </div>
+                            <div class="input-group">
+                                <label>Dirección</label>
+                                <input type="text" id="est-Direccion">
+                            </div>
+
+                            <div id="representante-section" style="display:none; border-top:1px solid #ddd; padding-top:10px; margin-top:10px;">
+                                <h3>Datos del representante (requerido si menor de edad)</h3>
+                                <div class="input-group">
+                                    <label>Nombres</label>
+                                    <input type="text" id="rep-Nombres">
+                                </div>
+                                <div class="input-group">
+                                    <label>Apellidos</label>
+                                    <input type="text" id="rep-Apellidos">
+                                </div>
+                                <div class="input-group">
+                                    <label>Cédula</label>
+                                    <input type="text" id="rep-Cedula">
+                                </div>
+                                <div class="input-group">
+                                    <label>Parentesco</label>
+                                    <input type="text" id="rep-Parentesco">
+                                </div>
+                                <div class="input-group">
+                                    <label>Teléfono representante</label>
+                                    <input type="text" id="rep-Telefono">
+                                </div>
+                                <div class="input-group">
+                                    <label>Correo representante</label>
+                                    <input type="email" id="rep-Correo">
+                                </div>
+                            </div>
+
+                            <div class="input-group" style="margin-top:10px;">
+                                <label>ID Curso (para inscripción)</label>
+                                <input type="number" id="ins-idCurso">
+                            </div>
+
+                            <button type="submit">Guardar Estudiante</button>
+                            <p id="add-student-error" class="error-message"></p>
+                        </form>
+                    </div>
+                </div>
+        </main>
+    </div>
+
+    <div id="edit-user-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Editar Contraseña</h2>
+            <form id="edit-user-form">
+                <div class="input-group">
+                    <label for="modal-username">Usuario:</label>
+                    <input type="text" id="modal-username" readonly>
+                </div>
+                <div class="input-group">
+                    <label for="modal-new-password">Nueva Contraseña:</label>
+                    <input type="password" id="modal-new-password" required>
+                </div>
+                <div class="input-group">
+                    <label for="moodal-new-rol">Rol</label>
+                    <select name="rol" id="rol">
+                        <option value="Admin">Administrador</option>
+                        <option value="Gestor">Gestor</option>
+                    </select>
+                </div>
+                <button type="submit">Guardar Cambios</button>
+                <p id="modal-error-message" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../public/js/gestion.js"></script>
+</body>
+</html>
