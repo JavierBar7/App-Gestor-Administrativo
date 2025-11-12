@@ -24,4 +24,19 @@ const listCursos = async (req, res) => {
     }
 };
 
-module.exports = { createCurso, listCursos };
+const updateCurso = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const success = await Curso.updateCurso(id, req.body);
+        if (success) {
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+        }
+    } catch (error) {
+        console.error('Error actualizando curso:', error);
+        return res.status(500).json({ success: false, message: 'Error al actualizar curso' });
+    }
+};
+
+module.exports = { createCurso, listCursos, updateCurso };

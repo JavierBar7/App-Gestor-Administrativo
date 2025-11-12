@@ -24,4 +24,19 @@ const listGrupos = async (req, res) => {
     }
 };
 
-module.exports = { createGrupo, listGrupos };
+const updateGrupo = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const success = await Grupo.updateGrupo(id, req.body);
+        if (success) {
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ success: false, message: 'Grupo no encontrado' });
+        }
+    } catch (error) {
+        console.error('Error actualizando grupo:', error);
+        return res.status(500).json({ success: false, message: 'Error al actualizar grupo' });
+    }
+};
+
+module.exports = { createGrupo, listGrupos, updateGrupo };

@@ -1,4 +1,18 @@
-const { Estudiante } = require('../models/Estudiante');
+exports.updateEstudiante = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const success = await Estudiante.updateEstudiante(id, req.body);
+        if (success) {
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+        }
+    } catch (error) {
+        console.error('Error actualizando estudiante:', error);
+        return res.status(500).json({ success: false, message: 'Error al actualizar estudiante' });
+    }
+};const { Estudiante } = require('../models/Estudiante');
+const { Grupo } = require('../models/Grupo');
 
 // Helper para calcular edad (años completos)
 function calcularEdad(fechaStr) {
@@ -59,10 +73,22 @@ exports.createEstudiante = async (req, res) => {
             }
         }
 
-        // registrar inscripción si llega idCurso
-        if (payload.idCurso) {
+        // registrar inscripción: aceptamos idCurso directamente o idGrupo (preferible)
+        let idCursoParaInscripcion = null;
+        if (payload.idGrupo) {
+            // resolver idCurso desde tabla grupos
+            const grupo = await Grupo.findById(payload.idGrupo);
+            if (!grupo) {
+                return res.status(400).json({ success: false, message: 'Grupo seleccionado no existe' });
+            }
+            idCursoParaInscripcion = grupo.idCurso;
+        } else if (payload.idCurso) {
+            idCursoParaInscripcion = payload.idCurso;
+        }
+
+        if (idCursoParaInscripcion) {
             const fechaIns = payload.Fecha_inscripcion || new Date().toISOString().slice(0,10);
-            await Estudiante.createInscripcion(idEstudiante, payload.idCurso, fechaIns);
+            await Estudiante.createInscripcion(idEstudiante, idCursoParaInscripcion, fechaIns);
         }
 
         return res.json({ success: true, idEstudiante });

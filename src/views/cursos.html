@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursos - Just Talk Academy</title>
+    <link rel="stylesheet" href="../../public/gestion.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Just Talk Academy</h2>
+            </div>
+            <nav class="nav-menu">
+                <ul>
+                    <li><a href="#" id="back-to-gestion">Volver</a></li>
+                    <li><a href="#" id="logout-btn">Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content-area">
+            <h1>Cursos y Grupos</h1>
+
+            <div style="margin: 12px 0;">
+                <button id="add-curso-grupo-btn">Agregar Curso/Grupo</button>
+            </div>
+
+            <div id="cursos-grouped" style="margin-top: 16px;">
+                <!-- Se llenará dinámicamente con los cursos y sus grupos -->
+                <p>Cargando cursos...</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Crear Curso / Grupo (tabs) -->
+    <div id="curso-grupo-modal" class="modal" style="display:none;">
+        <div class="modal-content large">
+            <span class="close-button" id="close-curso-grupo">&times;</span>
+            <h2>Crear Curso o Grupo</h2>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-curso">Crear Curso</button>
+                <button class="tab-btn" data-tab="tab-grupo">Crear Grupo</button>
+            </div>
+
+            <div id="tab-curso" class="tab active">
+                <form id="form-curso">
+                    <div class="input-group">
+                        <label>Nombre del Curso</label>
+                        <input type="text" id="curso-Nombre_Curso" required maxlength="50">
+                    </div>
+                    <div class="input-group">
+                        <label>Descripción</label>
+                        <input type="text" id="curso-Descripcion_Curso" maxlength="50">
+                    </div>
+                    <button type="submit">Crear Curso</button>
+                    <p id="curso-msg" class="info-message"></p>
+                </form>
+            </div>
+
+            <div id="tab-grupo" class="tab" style="display:none;">
+                <form id="form-grupo">
+                    <div class="input-group">
+                        <label>Curso</label>
+                        <select id="grupo-idCurso" required>
+                            <option value="">-- Seleccione un curso --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Nombre del Grupo</label>
+                        <input type="text" id="grupo-Nombre_Grupo" required maxlength="50">
+                    </div>
+                    <div class="input-group">
+                        <label>Fecha inicio</label>
+                        <input type="datetime-local" id="grupo-Fecha_inicio">
+                    </div>
+                    <div class="input-group">
+                        <label>Estado</label>
+                        <input type="text" id="grupo-Estado" maxlength="50">
+                    </div>
+                    <button type="submit">Crear Grupo</button>
+                    <p id="grupo-msg" class="info-message"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../public/js/cursosGrupos.js"></script>
+</body>
+</html>

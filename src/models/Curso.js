@@ -1,6 +1,14 @@
-const conn = require('../../config/database');
+    const conn = require('../../config/database');
 
-class Curso {
+    class Curso {
+        static async updateCurso(idCurso, data) {
+            const { Nombre_Curso, Descripcion_Curso } = data;
+            const [result] = await conn.promise().query(
+                'UPDATE cursos SET Nombre_Curso=?, Descripcion_Curso=? WHERE idCurso=?',
+                [Nombre_Curso, Descripcion_Curso, idCurso]
+            );
+            return result.affectedRows > 0;
+        }
     constructor(Nombre_Curso, Descripcion_Curso) {
         this.Nombre_Curso = Nombre_Curso;
         this.Descripcion_Curso = Descripcion_Curso;

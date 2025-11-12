@@ -179,6 +179,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const viewStudentsBtn = document.getElementById('view-students-btn');
     if (viewStudentsBtn) viewStudentsBtn.addEventListener('click', (e) => { e.preventDefault(); window.electronAPI.navigateToEstudiantes(); });
 
+    // Navegar a la vista de cursos
+    const viewCursosBtn = document.getElementById('view-cursos-btn');
+    if (viewCursosBtn) viewCursosBtn.addEventListener('click', (e) => { e.preventDefault(); window.electronAPI.navigateToCursos(); });
+
     closeModalBtn.addEventListener('click', () => {
         editUserModal.style.display = 'none';
     });

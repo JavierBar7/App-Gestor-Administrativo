@@ -94,3 +94,11 @@ ipcMain.on('navigate-estudiantes', (event) => {
         win.loadFile(path.join(__dirname, 'src/views/estudiantes.html'));
     }
 });
+
+// Navegar a vista de cursos
+ipcMain.on('navigate-cursos', (event) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+        win.loadFile(path.join(__dirname, 'src/views/cursos.html'));
+    }
+});

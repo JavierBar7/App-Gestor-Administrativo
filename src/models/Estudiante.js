@@ -1,6 +1,14 @@
-const conn = require('../../config/database');
+    const conn = require('../../config/database');
 
-class Estudiante {
+    class Estudiante {
+        static async updateEstudiante(idEstudiante, data) {
+            const { Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion } = data;
+            const [result] = await conn.promise().query(
+                'UPDATE estudiantes SET Nombres=?, Apellidos=?, Cedula=?, Fecha_Nacimiento=?, Telefono=?, Correo=?, Direccion=? WHERE idEstudiante=?',
+                [Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion, idEstudiante]
+            );
+            return result.affectedRows > 0;
+        }
     static async createEstudiante(data) {
         const { Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion } = data;
         const [result] = await conn.promise().query(
