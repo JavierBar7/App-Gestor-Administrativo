@@ -192,6 +192,118 @@ const tabs = document.querySelectorAll('.tab');
     // Render lists on modal open
     if (openBtn) openBtn.addEventListener('click', () => { renderCursosList(); renderGruposList(); });
 
+    // Expose a grouped renderer that can be used by the dedicated cursos page
+    async function renderGroupedCursos() {
+        const container = document.getElementById('cursos-grouped');
+        if (!container) return;
+        container.innerHTML = 'Cargando cursos...';
+        try {
+            const [resCursos, resGrupos] = await Promise.all([
+                fetch('http://localhost:3000/api/cursos'),
+                fetch('http://localhost:3000/api/grupos')
+            ]);
+            const cursos = await resCursos.json();
+            const grupos = await resGrupos.json();
+
+            if (!Array.isArray(cursos) || !Array.isArray(grupos)) {
+                container.innerHTML = '<p>Error al cargar datos.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            cursos.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'curso-card';
+                const title = document.createElement('h3');
+                title.textContent = c.Nombre_Curso + (c.Descripcion_Curso ? (' - ' + c.Descripcion_Curso) : '');
+                card.appendChild(title);
+
+                const grupoList = document.createElement('ul');
+                const gruposDelCurso = grupos.filter(g => String(g.idCurso) === String(c.idCurso));
+                if (gruposDelCurso.length === 0) {
+                    const li = document.createElement('li');
+                    li.textContent = 'No hay grupos para este curso.';
+                    grupoList.appendChild(li);
+                } else {
+                    gruposDelCurso.forEach(g => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `${g.Nombre_Grupo} &nbsp; <button class="edit-grupo" data-id="${g.idGrupo}">Editar</button>`;
+                        grupoList.appendChild(li);
+                    });
+                }
+
+                // Edit curso button
+                const editCursoBtn = document.createElement('button');
+                editCursoBtn.className = 'edit-curso';
+                editCursoBtn.setAttribute('data-id', c.idCurso);
+                editCursoBtn.textContent = 'Editar Curso';
+                card.appendChild(editCursoBtn);
+
+                card.appendChild(grupoList);
+                container.appendChild(card);
+            });
+
+            // Attach edit handlers that open the modal and populate fields
+            document.querySelectorAll('.edit-curso').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const res = await fetch('http://localhost:3000/api/cursos');
+                    const cursosAll = await res.json();
+                    const curso = cursosAll.find(x => String(x.idCurso) === String(id));
+                    if (!curso) return;
+                    document.getElementById('curso-Nombre_Curso').value = curso.Nombre_Curso;
+                    document.getElementById('curso-Descripcion_Curso').value = curso.Descripcion_Curso || '';
+                    formCurso.setAttribute('data-edit-id', id);
+                    // open modal and switch to curso tab
+                    modal.style.display = 'flex';
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    tabs.forEach(t => { t.classList.remove('active'); t.style.display = 'none'; });
+                    const cursoTabBtn = Array.from(tabButtons).find(b => b.getAttribute('data-tab') === 'tab-curso');
+                    if (cursoTabBtn) cursoTabBtn.classList.add('active');
+                    const cursoTab = document.getElementById('tab-curso');
+                    if (cursoTab) { cursoTab.classList.add('active'); cursoTab.style.display = 'block'; }
+                    cursoMsg.textContent = 'Editando curso...';
+                });
+            });
+
+            document.querySelectorAll('.edit-grupo').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const res = await fetch('http://localhost:3000/api/grupos');
+                    const gruposAll = await res.json();
+                    const grupo = gruposAll.find(x => String(x.idGrupo) === String(id));
+                    if (!grupo) return;
+                    document.getElementById('grupo-idCurso').value = grupo.idCurso;
+                    document.getElementById('grupo-Nombre_Grupo').value = grupo.Nombre_Grupo;
+                    document.getElementById('grupo-Fecha_inicio').value = grupo.Fecha_inicio ? grupo.Fecha_inicio.slice(0,16) : '';
+                    document.getElementById('grupo-Estado').value = grupo.Estado || '';
+                    formGrupo.setAttribute('data-edit-id', id);
+                    // open modal and switch to grupo tab
+                    modal.style.display = 'flex';
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    tabs.forEach(t => { t.classList.remove('active'); t.style.display = 'none'; });
+                    const grupoTabBtn = Array.from(tabButtons).find(b => b.getAttribute('data-tab') === 'tab-grupo');
+                    if (grupoTabBtn) grupoTabBtn.classList.add('active');
+                    const grupoTab = document.getElementById('tab-grupo');
+                    if (grupoTab) { grupoTab.classList.add('active'); grupoTab.style.display = 'block'; }
+                    grupoMsg.textContent = 'Editando grupo...';
+                });
+            });
+
+        } catch (err) {
+            console.error('Error rendering grouped cursos:', err);
+            container.innerHTML = '<p>Error al cargar cursos y grupos.</p>';
+        }
+    }
+
+    // Auto-run grouped renderer when the dedicated container exists
+    if (document.getElementById('cursos-grouped')) {
+        // small timeout to ensure DOM is ready
+        setTimeout(renderGroupedCursos, 50);
+        // expose globally so other modules can call it
+        window.renderGroupedCursos = renderGroupedCursos;
+    }
+
 // Utility to switch to a specific tab inside the modal
 function switchToTab(tabId) {
     tabButtons.forEach(b => b.classList.remove('active'));

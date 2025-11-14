@@ -20,54 +20,68 @@ document.addEventListener('DOMContentLoaded', async () => {
         return edad;
     }
 
-    async function loadStudents() {
+    let currentGroupId = null;
+    let currentGroupName = null;
+
+    // Render students for a specific group (fetches /api/grupos/:id/estudiantes)
+    async function renderStudentsForGroup(idGrupo, groupName) {
         try {
-            const response = await fetch('http://localhost:3000/api/estudiantes');
-            const students = await response.json();
-            studentsTableBody.innerHTML = '';
+            const res = await fetch(`http://localhost:3000/api/grupos/${idGrupo}/estudiantes`);
+            const students = await res.json();
+            const grupoStudentsEl = document.getElementById('grupo-students');
+            const studentsTbody = document.getElementById('students-table-body');
+            const noMsg = document.getElementById('no-students-message');
+
+            studentsTbody.innerHTML = '';
             if (!students || students.length === 0) {
-                noStudentsMessage.style.display = 'block';
-                return;
-            }
-            noStudentsMessage.style.display = 'none';
-            students.forEach(s => {
-                const row = studentsTableBody.insertRow();
-                row.innerHTML = `
-                    <td>${s.idEstudiante}</td>
-                    <td>${s.Nombres}</td>
-                    <td>${s.Apellidos}</td>
-                    <td>${s.Cedula}</td>
-                    <td>${s.Fecha_Nacimiento ? s.Fecha_Nacimiento.split('T')[0] : ''}</td>
-                    <td>${s.Telefono || ''}</td>
-                    <td>${s.Correo || ''}</td>
-                    <td>${s.Direccion || ''}</td>
-                    <td>
-                        <button class="edit-student" data-id="${s.idEstudiante}">Editar</button>
-                    </td>
-                `;
-            });
-            // Add event listeners for edit buttons
-            document.querySelectorAll('.edit-student').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const id = btn.getAttribute('data-id');
-                    const student = students.find(s => String(s.idEstudiante) === String(id));
-                    if (!student) return;
-                    // Open modal and fill form
-                    document.getElementById('student-modal-title').textContent = 'Editar Estudiante';
-                    addStudentModal.style.display = 'flex';
-                    addStudentForm.setAttribute('data-edit-id', id);
-                    document.getElementById('est-Nombres').value = student.Nombres || '';
-                    document.getElementById('est-Apellidos').value = student.Apellidos || '';
-                    document.getElementById('est-Cedula').value = student.Cedula || '';
-                    document.getElementById('est-Fecha_Nacimiento').value = student.Fecha_Nacimiento ? student.Fecha_Nacimiento.split('T')[0] : '';
-                    document.getElementById('est-Telefono').value = student.Telefono || '';
-                    document.getElementById('est-Correo').value = student.Correo || '';
-                    document.getElementById('est-Direccion').value = student.Direccion || '';
+                noMsg.style.display = 'block';
+            } else {
+                noMsg.style.display = 'none';
+                students.forEach(s => {
+                    const tr = document.createElement('tr');
+                    // format pagos: join date+amount
+                    const pagosHtml = (s.pagos && s.pagos.length) ? s.pagos.map(p => `${new Date(p.Fecha_pago).toLocaleDateString()} (${p.Monto_usd})`).join('<br>') : '—';
+                    tr.innerHTML = `
+                        <td>${s.Nombres} ${s.Apellidos}</td>
+                        <td>${s.edad != null ? s.edad : '—'}</td>
+                        <td>${pagosHtml}</td>
+                        <td><button class="edit-student" data-id="${s.idEstudiante}">Editar</button></td>
+                    `;
+                    studentsTbody.appendChild(tr);
                 });
-            });
+
+                // attach edit handlers (reuse existing modal)
+                document.querySelectorAll('.edit-student').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = btn.getAttribute('data-id');
+                        // fetch student details from API or reuse students array
+                        const studRes = await fetch(`http://localhost:3000/api/estudiantes`);
+                        const allStudents = await studRes.json();
+                        const student = allStudents.find(sg => String(sg.idEstudiante) === String(id));
+                        if (!student) return;
+                        // Open modal and fill form
+                        document.getElementById('student-modal-title').textContent = 'Editar Estudiante';
+                        addStudentModal.style.display = 'flex';
+                        addStudentForm.setAttribute('data-edit-id', id);
+                        document.getElementById('est-Nombres').value = student.Nombres || '';
+                        document.getElementById('est-Apellidos').value = student.Apellidos || '';
+                        document.getElementById('est-Cedula').value = student.Cedula || '';
+                        document.getElementById('est-Fecha_Nacimiento').value = student.Fecha_Nacimiento ? student.Fecha_Nacimiento.split('T')[0] : '';
+                        document.getElementById('est-Telefono').value = student.Telefono || '';
+                        document.getElementById('est-Correo').value = student.Correo || '';
+                        document.getElementById('est-Direccion').value = student.Direccion || '';
+                    });
+                });
+            }
+
+            currentGroupId = idGrupo;
+            currentGroupName = groupName;
+            // show students panel and hide cards
+            document.getElementById('grupos-cards').style.display = 'none';
+            grupoStudentsEl.style.display = 'block';
+            document.getElementById('grupo-students-title').textContent = `Estudiantes — ${groupName || ''}`;
         } catch (err) {
-            console.error('Error cargando estudiantes:', err);
-            noStudentsMessage.style.display = 'block';
+            console.error('Error cargando estudiantes del grupo:', err);
         }
     }
 
@@ -93,8 +107,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Render group cards (summary endpoint)
+    async function renderGroupCards() {
+        try {
+            const res = await fetch('http://localhost:3000/api/grupos/summary');
+            const groups = await res.json();
+            const container = document.getElementById('grupos-cards');
+            container.innerHTML = '';
+            if (!groups || groups.length === 0) {
+                container.innerHTML = '<p>No hay grupos disponibles.</p>';
+                return;
+            }
+            groups.forEach(g => {
+                const card = document.createElement('div');
+                card.className = 'group-card';
+                card.style.border = '1px solid #ddd';
+                card.style.padding = '12px';
+                card.style.width = '220px';
+                card.style.borderRadius = '6px';
+                card.style.cursor = 'pointer';
+                card.innerHTML = `<h4>${g.Nombre_Grupo}</h4><p><b>Curso:</b> ${g.Nombre_Curso || g.idCurso}</p><p><b>Estudiantes:</b> ${g.studentCount}</p>`;
+                card.addEventListener('click', () => {
+                    renderStudentsForGroup(g.idGrupo, g.Nombre_Grupo);
+                });
+                container.appendChild(card);
+            });
+        } catch (err) {
+            console.error('Error cargando resumen de grupos:', err);
+        }
+    }
+
     if (addStudentBtn) {
         addStudentBtn.addEventListener('click', () => {
+            // prepare modal for new student
+            addStudentForm.removeAttribute('data-edit-id');
+            addStudentForm.reset();
+            // set inscripción date default to today
+            const fechaInsInput = document.getElementById('ins-Fecha_inscripcion');
+            if (fechaInsInput) fechaInsInput.value = new Date().toISOString().slice(0,10);
+            document.getElementById('student-modal-title').textContent = 'Agregar Estudiante';
             addStudentModal.style.display = 'flex';
         });
     }
@@ -136,7 +187,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Telefono: document.getElementById('est-Telefono').value,
                 Correo: document.getElementById('est-Correo').value,
                 Direccion: document.getElementById('est-Direccion').value,
-                idCurso: mappedIdCurso
+                // Prefer enviar idGrupo para que el backend resuelva idCurso; también incluimos fecha de inscripción
+                idGrupo: selectedGrupoId || null,
+                Fecha_inscripcion: document.getElementById('ins-Fecha_inscripcion') ? document.getElementById('ins-Fecha_inscripcion').value : null
             };
             const edad = calcularEdad(payload.Fecha_Nacimiento);
             if (edad < 18) {
@@ -170,7 +223,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     addStudentForm.removeAttribute('data-edit-id');
                     document.getElementById('student-modal-title').textContent = 'Agregar Estudiante';
                     addStudentForm.reset();
-                    loadStudents();
+                    // reset fecha de inscripción to today
+                    const fechaInsInput = document.getElementById('ins-Fecha_inscripcion');
+                    if (fechaInsInput) fechaInsInput.value = new Date().toISOString().slice(0,10);
+                    // refresh current view: if viewing a group, reload its students; otherwise reload cards
+                    if (currentGroupId) {
+                        await renderStudentsForGroup(currentGroupId, currentGroupName);
+                    } else {
+                        await renderGroupCards();
+                    }
                 } else {
                     const errEl = document.getElementById('add-student-error');
                     errEl.textContent = result.message || (editId ? 'Error al editar estudiante' : 'Error al crear estudiante');
@@ -189,7 +250,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const backBtn = document.getElementById('back-to-gestion');
     if (backBtn) backBtn.addEventListener('click', (e) => { e.preventDefault(); window.electronAPI.navigateToDashboard(); });
 
+    // Back from students view to groups
+    const backToGroupsBtn = document.getElementById('back-to-groups');
+    if (backToGroupsBtn) backToGroupsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('grupo-students').style.display = 'none';
+        document.getElementById('grupos-cards').style.display = 'flex';
+    });
+
     if (logoutBtn) logoutBtn.addEventListener('click', () => window.electronAPI.logout());
     await loadGrupos();
-    loadStudents();
+    await renderGroupCards();
 });

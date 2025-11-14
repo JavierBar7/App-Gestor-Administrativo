@@ -88,7 +88,9 @@ exports.createEstudiante = async (req, res) => {
 
         if (idCursoParaInscripcion) {
             const fechaIns = payload.Fecha_inscripcion || new Date().toISOString().slice(0,10);
-            await Estudiante.createInscripcion(idEstudiante, idCursoParaInscripcion, fechaIns);
+            // pass idGrupo when available so inscripcion links to the group
+            const idGrupoForIns = payload.idGrupo || null;
+            await Estudiante.createInscripcion(idEstudiante, idCursoParaInscripcion, fechaIns, idGrupoForIns);
         }
 
         return res.json({ success: true, idEstudiante });

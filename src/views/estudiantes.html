@@ -16,7 +16,9 @@
             </div>
             <nav class="nav-menu">
                 <ul>
-                    <li><a href="#" id="back-to-gestion">Volver</a></li>
+                    <li><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
+                    <li><a href="#" id="view-students-btn">Estudiantes</a></li>
+                    <li><a href="#" id="view-cursos-btn">Cursos</a></li>
                     <li><a href="#" id="logout-btn">Cerrar Sesión</a></li>
                 </ul>
             </nav>
@@ -27,27 +29,31 @@
 
             <div style="margin: 12px 0;">
                 <button id="add-student-btn">Agregar Estudiante</button>
-                <button id="add-curso-grupo-btn">Agregar Curso/Grupo</button>
             </div>
 
-            <div class="user-table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombres</th>
-                            <th>Apellidos</th>
-                            <th>Cédula</th>
-                            <th>Fecha Nacimiento</th>
-                            <th>Teléfono</th>
-                            <th>Correo</th>
-                            <th>Dirección</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="students-table-body"></tbody>
-                </table>
-                <p id="no-students-message" class="info-message" style="display: none;">No hay estudiantes registrados.</p>
+            <!-- Grupos cards view -->
+            <div id="grupos-cards" class="cards-container" style="display: flex; flex-wrap: wrap; gap: 12px;">
+                <!-- cards rendered here -->
+            </div>
+
+            <!-- Students list for selected group (hidden until a group is selected) -->
+            <div id="grupo-students" style="margin-top:20px; display:none;">
+                <h2 id="grupo-students-title">Estudiantes</h2>
+                <button id="back-to-groups">Volver a Grupos</button>
+                <div class="user-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Edad</th>
+                                <th>Últimos 3 pagos</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-table-body"></tbody>
+                    </table>
+                    <p id="no-students-message" class="info-message" style="display: none;">No hay estudiantes en este grupo.</p>
+                </div>
             </div>
         </main>
     </div>
@@ -121,6 +127,11 @@
                     </select>
                 </div>
 
+                <div class="input-group" style="margin-top:10px;">
+                    <label>Fecha de inscripción</label>
+                    <input type="date" id="ins-Fecha_inscripcion" />
+                </div>
+
                 <button type="submit">Guardar Estudiante</button>
                 <p id="add-student-error" class="error-message"></p>
             </form>
@@ -178,6 +189,7 @@
         </div>
     </div>
 
+    <script src="../../public/js/menu.js"></script>
     <script src="../../public/js/estudiantes.js"></script>
     <script src="../../public/js/cursosGrupos.js"></script>
 </body>
