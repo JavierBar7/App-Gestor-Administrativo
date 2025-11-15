@@ -38,20 +38,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 noMsg.style.display = 'none';
                 students.forEach(s => {
-                    const tr = document.createElement('tr');
-                    // format pagos: join date+amount
-                    const pagosHtml = (s.pagos && s.pagos.length) ? s.pagos.map(p => `${new Date(p.Fecha_pago).toLocaleDateString()} (${p.Monto_usd})`).join('<br>') : '—';
-                    tr.innerHTML = `
-                        <td>${s.Nombres} ${s.Apellidos}</td>
-                        <td>${s.edad != null ? s.edad : '—'}</td>
-                        <td>${pagosHtml}</td>
-                        <td><button class="edit-student" data-id="${s.idEstudiante}">Editar</button></td>
-                    `;
-                    studentsTbody.appendChild(tr);
+                    try {
+                        const tr = document.createElement('tr');
+
+                        // proteger Fecha_Nacimiento: puede venir como Date, string o null
+                        let fecha = '';
+                        if (s.Fecha_Nacimiento) {
+                            if (typeof s.Fecha_Nacimiento === 'string' && s.Fecha_Nacimiento.includes('T')) {
+                                fecha = s.Fecha_Nacimiento.split('T')[0];
+                            } else {
+                                try {
+                                    fecha = new Date(s.Fecha_Nacimiento).toISOString().slice(0,10);
+                                } catch (e) {
+                                    fecha = '';
+                                }
+                            }
+                        }
+
+                        tr.innerHTML = `
+                            <td>${s.idEstudiante}</td>
+                            <td>${s.Nombres || ''}</td>
+                            <td>${s.Apellidos || ''}</td>
+                            <td>${s.Cedula || ''}</td>
+                            <td>${fecha}</td>
+                            <td>${s.Telefono || ''}</td>
+                            <td>${s.Correo || ''}</td>
+                            <td>${s.Direccion || ''}</td>
+                            <td><button class="edit-student" data-id="${s.idEstudiante}">Editar</button></td>
+                        `;
+                        studentsTbody.appendChild(tr);
+                    } catch (rowErr) {
+                        console.error('Error renderizando estudiante', s, rowErr);
+                    }
                 });
 
                 // attach edit handlers (reuse existing modal)
-                document.querySelectorAll('.edit-student').forEach(btn => {
+                studentsTbody.querySelectorAll('.edit-student').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const id = btn.getAttribute('data-id');
                         // fetch student details from API or reuse students array
@@ -66,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.getElementById('est-Nombres').value = student.Nombres || '';
                         document.getElementById('est-Apellidos').value = student.Apellidos || '';
                         document.getElementById('est-Cedula').value = student.Cedula || '';
-                        document.getElementById('est-Fecha_Nacimiento').value = student.Fecha_Nacimiento ? student.Fecha_Nacimiento.split('T')[0] : '';
+                        document.getElementById('est-Fecha_Nacimiento').value = student.Fecha_Nacimiento ? (typeof student.Fecha_Nacimiento === 'string' && student.Fecha_Nacimiento.includes('T') ? student.Fecha_Nacimiento.split('T')[0] : new Date(student.Fecha_Nacimiento).toISOString().slice(0,10)) : '';
                         document.getElementById('est-Telefono').value = student.Telefono || '';
                         document.getElementById('est-Correo').value = student.Correo || '';
                         document.getElementById('est-Direccion').value = student.Direccion || '';

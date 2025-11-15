@@ -24,6 +24,19 @@ const grupoRoutes = require('../routes/grupoRoutes');
 app.use('/api/cursos', cursoRoutes);
 app.use('/api/grupos', grupoRoutes);
 
+// Request logging (simple)
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
+    next();
+});
+
+// Error handler - centraliza logging de errores y devuelve JSON
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err && err.stack ? err.stack : err);
+    if (res.headersSent) return next(err);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+});
+
 app.get('/', (req, res) => {
     res.render('login'); 
 });
