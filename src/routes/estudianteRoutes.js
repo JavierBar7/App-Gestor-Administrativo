@@ -4,6 +4,8 @@ const estudianteController = require('../controllers/estudiante.controller');
 
 // Lista estudiantes
 router.get('/', estudianteController.getEstudiantes);
+// Detalles de un estudiante (pagos, representante, grupos)
+router.get('/:id', estudianteController.getEstudianteDetails);
 router.put('/:id', estudianteController.updateEstudiante);
 
 // Crea estudiante (y representante/inscripcion si aplica)

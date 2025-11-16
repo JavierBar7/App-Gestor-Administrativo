@@ -76,10 +76,74 @@
         return rows;
     }
 
+    static async getLatestTasa() {
+        const [rows] = await conn.promise().query(
+            'SELECT Tasa_usd_a_bs FROM tasa_cambio ORDER BY Fecha_Vigencia DESC LIMIT 1'
+        );
+        return rows && rows.length ? rows[0].Tasa_usd_a_bs : null;
+    }
+
+    static async createPago({ idDeuda = null, idMetodos_pago = null, idCuenta_Destino = null, idEstudiante = null, Referencia = null, Monto_bs = null, Tasa_Pago = null, Monto_usd = null, Fecha_pago = null }) {
+        const [result] = await conn.promise().query(
+            'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
+        );
+        return result.insertId;
+    }
+
+    static async createPagoParcial({ idPago = null, idDeuda = null, Monto_parcial = null }) {
+        const [result] = await conn.promise().query(
+            'INSERT INTO pagos_parciales (idPago, idDeuda, Monto_parcial) VALUES (?, ?, ?)',
+            [idPago, idDeuda, Monto_parcial]
+        );
+        return result.insertId;
+    }
+
     static async getEstudiantes() {
         const [rows] = await conn.promise().query(
             `SELECT e.idEstudiante, e.Nombres, e.Apellidos, e.Cedula, e.Fecha_Nacimiento, e.Telefono, e.Correo, e.Direccion
              FROM estudiantes e`);
+        return rows;
+    }
+
+    static async getEstudianteById(idEstudiante) {
+        const [rows] = await conn.promise().query(
+            `SELECT idEstudiante, Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion
+             FROM estudiantes WHERE idEstudiante = ?`, [idEstudiante]
+        );
+        return rows && rows.length ? rows[0] : null;
+    }
+
+    static async getPaymentsByStudent(idEstudiante) {
+        const [rows] = await conn.promise().query(
+            `SELECT idPago, idDeuda, idMetodos_pago, Referencia, Monto_bs, Monto_usd, Fecha_pago
+             FROM pagos WHERE idEstudiante = ? ORDER BY Fecha_pago DESC`, [idEstudiante]
+        );
+        return rows;
+    }
+
+    static async getRepresentanteByStudent(idEstudiante) {
+        const [rows] = await conn.promise().query(
+            `SELECT r.idRepresentante, r.Nombres, r.Apellidos, r.Cedula, r.Parentesco, r.Correo, r.Direccion,
+                    GROUP_CONCAT(tr.Numero SEPARATOR ', ') AS Telefonos
+             FROM representantes r
+             JOIN representante_estudiante re ON re.idRepresentante = r.idRepresentante
+             LEFT JOIN telefonos_representante tr ON tr.idRepresentante = r.idRepresentante
+             WHERE re.idEstudiante = ?
+             GROUP BY r.idRepresentante`, [idEstudiante]
+        );
+        return rows && rows.length ? rows[0] : null;
+    }
+
+    static async getGroupsByStudent(idEstudiante) {
+        const [rows] = await conn.promise().query(
+            `SELECT i.Fecha_inscripcion, i.idGrupo, g.Nombre_Grupo, g.idCurso, c.Nombre_Curso
+             FROM inscripciones i
+             LEFT JOIN grupos g ON g.idGrupo = i.idGrupo
+             LEFT JOIN cursos c ON c.idCurso = g.idCurso
+             WHERE i.idEstudiante = ?
+             ORDER BY i.Fecha_inscripcion DESC`, [idEstudiante]
+        );
         return rows;
     }
 }

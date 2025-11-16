@@ -47,7 +47,7 @@
                                 <th>Nombre</th>
                                 <th>Edad</th>
                                 <th>Últimos 3 pagos</th>
-                                <th>Acciones</th>
+                                    <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="students-table-body"></tbody>
@@ -55,6 +55,46 @@
                     <p id="no-students-message" class="info-message" style="display: none;">No hay estudiantes en este grupo.</p>
                 </div>
             </div>
+
+        <!-- Student details modal -->
+        <div id="student-details-modal" class="modal" style="display:none;">
+            <div class="modal-content large">
+                <span class="close-button" id="close-student-details">&times;</span>
+                <h2 id="details-title">Detalle del Estudiante</h2>
+                <div id="details-body">
+                    <section>
+                        <h3>Datos personales</h3>
+                        <p id="det-nombre"></p>
+                        <p id="det-cedula"></p>
+                        <p id="det-fecha-nac"></p>
+                        <p id="det-telefono"></p>
+                        <p id="det-correo"></p>
+                        <p id="det-direccion"></p>
+                    </section>
+
+                    <section>
+                        <h3>Representante</h3>
+                        <div id="det-representante">No posee representante registrado.</div>
+                    </section>
+
+                    <section>
+                        <h3>Pagos</h3>
+                        <table id="det-pagos-table">
+                            <thead><tr><th>Fecha</th><th>Referencia</th><th>Monto Bs</th><th>Monto USD</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </section>
+
+                    <section>
+                        <h3>Historial de Grupos</h3>
+                        <table id="det-grupos-table">
+                            <thead><tr><th>Fecha inscripción</th><th>Grupo</th><th>Curso</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </section>
+                </div>
+            </div>
+        </div>
         </main>
     </div>
 
@@ -130,6 +170,34 @@
                 <div class="input-group" style="margin-top:10px;">
                     <label>Fecha de inscripción</label>
                     <input type="date" id="ins-Fecha_inscripcion" />
+                </div>
+
+                <hr />
+                <h3>Pago (opcional)</h3>
+                <div class="input-group">
+                    <label>Método de pago</label>
+                    <select id="pay-metodo">
+                        <option value="">-- Seleccione método --</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Monto</label>
+                    <input type="number" step="0.0001" id="pay-monto" placeholder="0.00">
+                </div>
+                <div class="input-group">
+                    <label>Moneda</label>
+                    <select id="pay-moneda">
+                        <option value="bs">Bs</option>
+                        <option value="usd">USD</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Referencia</label>
+                    <input type="text" id="pay-referencia" placeholder="Referencia / referencia pago móvil">
+                </div>
+                <div class="input-group">
+                    <label>Cuenta destino (opcional)</label>
+                    <input type="text" id="pay-cuenta" placeholder="idCuenta_Destino">
                 </div>
 
                 <button type="submit">Guardar Estudiante</button>

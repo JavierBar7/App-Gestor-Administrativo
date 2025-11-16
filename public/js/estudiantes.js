@@ -27,7 +27,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function renderStudentsForGroup(idGrupo, groupName) {
         try {
             const res = await fetch(`http://localhost:3000/api/grupos/${idGrupo}/estudiantes`);
-            const students = await res.json();
+            let students;
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Error HTTP ${res.status} cargando estudiantes del grupo:`, text);
+                document.getElementById('students-table-body').innerHTML = '';
+                document.getElementById('no-students-message').textContent = 'Error al cargar estudiantes (ver consola)';
+                document.getElementById('no-students-message').style.display = 'block';
+                return;
+            }
+            try {
+                students = await res.json();
+            } catch (jsonErr) {
+                const txt = await res.text();
+                console.error('Respuesta no es JSON al pedir estudiantes:', txt, jsonErr);
+                document.getElementById('students-table-body').innerHTML = '';
+                document.getElementById('no-students-message').textContent = 'Respuesta inválida del servidor (ver consola)';
+                document.getElementById('no-students-message').style.display = 'block';
+                return;
+            }
             const grupoStudentsEl = document.getElementById('grupo-students');
             const studentsTbody = document.getElementById('students-table-body');
             const noMsg = document.getElementById('no-students-message');
@@ -55,16 +73,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         }
 
+                        // calcular edad a partir de Fecha_Nacimiento
+                        let edadDisplay = '—';
+                        try {
+                            if (s.Fecha_Nacimiento) {
+                                const calc = calcularEdad(s.Fecha_Nacimiento);
+                                edadDisplay = isNaN(calc) ? '—' : calc;
+                            }
+                        } catch (e) {
+                            edadDisplay = '—';
+                        }
+
                         tr.innerHTML = `
-                            <td>${s.idEstudiante}</td>
-                            <td>${s.Nombres || ''}</td>
-                            <td>${s.Apellidos || ''}</td>
-                            <td>${s.Cedula || ''}</td>
-                            <td>${fecha}</td>
-                            <td>${s.Telefono || ''}</td>
-                            <td>${s.Correo || ''}</td>
-                            <td>${s.Direccion || ''}</td>
-                            <td><button class="edit-student" data-id="${s.idEstudiante}">Editar</button></td>
+                            <td class="student-name" data-id="${s.idEstudiante}" style="cursor:pointer;color:blue;text-decoration:underline;">${s.Nombres || ''} ${s.Apellidos || ''}</td>
+                            <td>${edadDisplay}</td>
+                            <td>—</td>
+                            <td>
+                                <button class="edit-student" data-id="${s.idEstudiante}">Editar</button>
+                            </td>
                         `;
                         studentsTbody.appendChild(tr);
                     } catch (rowErr) {
@@ -72,7 +98,72 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
 
-                // attach edit handlers (reuse existing modal)
+                // attach click handler to student name cells to view details
+                studentsTbody.querySelectorAll('.student-name').forEach(cell => {
+                    cell.addEventListener('click', async (e) => {
+                        const id = cell.getAttribute('data-id');
+                        try {
+                            const res = await fetch(`http://localhost:3000/api/estudiantes/${id}`);
+                            const data = await res.json();
+                            if (!data || !data.success) {
+                                alert('No se pudieron obtener los detalles del estudiante');
+                                return;
+                            }
+                            // fill modal
+                            const est = data.estudiante;
+                            document.getElementById('det-nombre').textContent = `${est.Nombres} ${est.Apellidos}`;
+                            document.getElementById('det-cedula').textContent = `Cédula: ${est.Cedula || ''}`;
+                            document.getElementById('det-fecha-nac').textContent = `Fecha de Nacimiento: ${est.Fecha_Nacimiento ? (typeof est.Fecha_Nacimiento === 'string' && est.Fecha_Nacimiento.includes('T') ? est.Fecha_Nacimiento.split('T')[0] : new Date(est.Fecha_Nacimiento).toISOString().slice(0,10)) : ''}`;
+                            document.getElementById('det-telefono').textContent = `Teléfono: ${est.Telefono || ''}`;
+                            document.getElementById('det-correo').textContent = `Correo: ${est.Correo || ''}`;
+                            document.getElementById('det-direccion').textContent = `Dirección: ${est.Direccion || ''}`;
+
+                            // representante
+                            const repEl = document.getElementById('det-representante');
+                            if (data.representante) {
+                                const r = data.representante;
+                                repEl.innerHTML = `<p>${r.Nombres} ${r.Apellidos} — ${r.Parentesco || ''}</p><p>Cédula: ${r.Cedula || ''}</p><p>Teléfonos: ${r.Telefonos || ''}</p><p>Correo: ${r.Correo || ''}</p><p>Dirección: ${r.Direccion || ''}</p>`;
+                            } else {
+                                repEl.textContent = 'No posee representante registrado.';
+                            }
+
+                            // pagos
+                            const pagosTbody = document.querySelector('#det-pagos-table tbody');
+                            pagosTbody.innerHTML = '';
+                            if (Array.isArray(data.pagos) && data.pagos.length) {
+                                data.pagos.forEach(p => {
+                                    const row = document.createElement('tr');
+                                    const fecha = p.Fecha_pago ? (typeof p.Fecha_pago === 'string' && p.Fecha_pago.includes('T') ? p.Fecha_pago.split('T')[0] : new Date(p.Fecha_pago).toISOString().slice(0,10)) : '';
+                                    row.innerHTML = `<td>${fecha}</td><td>${p.Referencia || ''}</td><td>${p.Monto_bs != null ? p.Monto_bs : ''}</td><td>${p.Monto_usd != null ? p.Monto_usd : ''}</td>`;
+                                    pagosTbody.appendChild(row);
+                                });
+                            } else {
+                                pagosTbody.innerHTML = '<tr><td colspan="4">No hay pagos registrados.</td></tr>';
+                            }
+
+                            // grupos
+                            const gruposTbody = document.querySelector('#det-grupos-table tbody');
+                            gruposTbody.innerHTML = '';
+                            if (Array.isArray(data.grupos) && data.grupos.length) {
+                                data.grupos.forEach(g => {
+                                    const row = document.createElement('tr');
+                                    const fecha = g.Fecha_inscripcion ? (typeof g.Fecha_inscripcion === 'string' && g.Fecha_inscripcion.includes('T') ? g.Fecha_inscripcion.split('T')[0] : new Date(g.Fecha_inscripcion).toISOString().slice(0,10)) : '';
+                                    row.innerHTML = `<td>${fecha}</td><td>${g.Nombre_Grupo || ''}</td><td>${g.Nombre_Curso || ''}</td>`;
+                                    gruposTbody.appendChild(row);
+                                });
+                            } else {
+                                gruposTbody.innerHTML = '<tr><td colspan="3">No hay historial de grupos.</td></tr>';
+                            }
+
+                            // show modal
+                            document.getElementById('student-details-modal').style.display = 'flex';
+                        } catch (err) {
+                            console.error('Error cargando detalles:', err);
+                            alert('Error cargando detalles del estudiante');
+                        }
+                    });
+                });
+
                 studentsTbody.querySelectorAll('.edit-student').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const id = btn.getAttribute('data-id');
@@ -129,10 +220,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Load payment methods to populate select
+    async function loadMetodosPago() {
+        try {
+            const res = await fetch('http://localhost:3000/api/metodos_pagos/metodos');
+            const metodos = await res.json();
+            const select = document.getElementById('pay-metodo');
+            if (select) {
+                select.innerHTML = '<option value="">-- Seleccione método --</option>';
+                (Array.isArray(metodos) ? metodos : []).forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.idMetodos_pago;
+                    opt.textContent = `${m.Nombre} (${m.Moneda_asociada || ''})`;
+                    select.appendChild(opt);
+                });
+            }
+        } catch (err) {
+            console.error('Error cargando métodos de pago:', err);
+        }
+    }
+
     // Render group cards (summary endpoint)
     async function renderGroupCards() {
         try {
             const res = await fetch('http://localhost:3000/api/grupos/summary');
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('Error HTTP cargando resumen de grupos:', res.status, text);
+                document.getElementById('grupos-cards').innerHTML = '<p>Error al cargar grupos. Revisa servidor.</p>';
+                return;
+            }
             const groups = await res.json();
             const container = document.getElementById('grupos-cards');
             container.innerHTML = '';
@@ -177,6 +294,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Close student details modal
+    const closeDetailsBtn = document.getElementById('close-student-details');
+    if (closeDetailsBtn) {
+        closeDetailsBtn.addEventListener('click', () => {
+            document.getElementById('student-details-modal').style.display = 'none';
+        });
+    }
+
     const fechaNacimientoInput = document.getElementById('est-Fecha_Nacimiento');
     if (fechaNacimientoInput) {
         fechaNacimientoInput.addEventListener('change', () => {
@@ -213,6 +338,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 idGrupo: selectedGrupoId || null,
                 Fecha_inscripcion: document.getElementById('ins-Fecha_inscripcion') ? document.getElementById('ins-Fecha_inscripcion').value : null
             };
+
+            // Adjuntar info de pago si el usuario completó monto
+            const payMontoEl = document.getElementById('pay-monto');
+            if (payMontoEl && payMontoEl.value && Number(payMontoEl.value) > 0) {
+                payload.pago = {
+                    metodoId: document.getElementById('pay-metodo') ? document.getElementById('pay-metodo').value : null,
+                    monto: document.getElementById('pay-monto').value,
+                    moneda: document.getElementById('pay-moneda') ? document.getElementById('pay-moneda').value : 'bs',
+                    referencia: document.getElementById('pay-referencia') ? document.getElementById('pay-referencia').value : null,
+                    idCuenta_Destino: document.getElementById('pay-cuenta') ? document.getElementById('pay-cuenta').value : null
+                };
+            }
             const edad = calcularEdad(payload.Fecha_Nacimiento);
             if (edad < 18) {
                 payload.representante = {
@@ -282,5 +419,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (logoutBtn) logoutBtn.addEventListener('click', () => window.electronAPI.logout());
     await loadGrupos();
+    await loadMetodosPago();
     await renderGroupCards();
 });

@@ -18,6 +18,9 @@ const estudianteRoutes = require('../routes/estudianteRoutes');
 app.use('/api/auth', loginRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/estudiantes', estudianteRoutes);
+// rutas para pagos/metodos
+const pagosRoutes = require('../routes/pagosRoutes');
+app.use('/api/metodos_pagos', pagosRoutes);
 // Rutas para cursos y grupos
 const cursoRoutes = require('../routes/cursoRoutes');
 const grupoRoutes = require('../routes/grupoRoutes');

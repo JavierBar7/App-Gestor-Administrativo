@@ -36,6 +36,23 @@ exports.getEstudiantes = async (req, res) => {
     }
 };
 
+exports.getEstudianteDetails = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const estudiante = await Estudiante.getEstudianteById(id);
+        if (!estudiante) return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+
+        const pagos = await Estudiante.getPaymentsByStudent(id);
+        const representante = await Estudiante.getRepresentanteByStudent(id);
+        const grupos = await Estudiante.getGroupsByStudent(id);
+
+        return res.json({ success: true, estudiante, pagos, representante, grupos });
+    } catch (err) {
+        console.error('Error obteniendo detalles del estudiante:', err);
+        return res.status(500).json({ success: false, message: 'Error al obtener detalles del estudiante' });
+    }
+};
+
 exports.createEstudiante = async (req, res) => {
     try {
         const payload = req.body;
@@ -91,6 +108,72 @@ exports.createEstudiante = async (req, res) => {
             // pass idGrupo when available so inscripcion links to the group
             const idGrupoForIns = payload.idGrupo || null;
             await Estudiante.createInscripcion(idEstudiante, idCursoParaInscripcion, fechaIns, idGrupoForIns);
+        }
+
+        // Registrar pago si se envió información de pago en el payload
+        if (payload.pago) {
+            try {
+                const pago = payload.pago;
+                // validar campos mínimos del pago
+                if (!pago.monto || !pago.metodoId) {
+                    return res.status(400).json({ success: false, message: 'Faltan datos del pago: monto o método.' });
+                }
+
+                const tasaActual = await Estudiante.getLatestTasa();
+                let Monto_bs = null;
+                let Monto_usd = null;
+                let Tasa_Pago = tasaActual;
+                const moneda = pago.moneda ? String(pago.moneda).toLowerCase() : 'bs';
+                const montoNum = Number(pago.monto);
+                if (isNaN(montoNum)) {
+                    return res.status(400).json({ success: false, message: 'Monto de pago inválido.' });
+                }
+
+                if (moneda.includes('usd') || moneda.includes('dolar') || moneda === 'usd') {
+                    Monto_usd = Number(montoNum.toFixed(4));
+                    if (tasaActual) {
+                        Monto_bs = Number((Monto_usd * tasaActual).toFixed(4));
+                    }
+                } else {
+                    // asumimos bolívares
+                    Monto_bs = Number(montoNum.toFixed(4));
+                    if (tasaActual) {
+                        if (tasaActual === 0) {
+                            Monto_usd = null;
+                        } else {
+                            Monto_usd = Number((Monto_bs / tasaActual).toFixed(4));
+                        }
+                    }
+                }
+
+                const Fecha_pago = pago.Fecha_pago || new Date().toISOString().slice(0,19).replace('T', ' ');
+                const idPago = await Estudiante.createPago({
+                    idDeuda: pago.idDeuda || null,
+                    idMetodos_pago: pago.metodoId,
+                    idCuenta_Destino: pago.idCuenta_Destino || null,
+                    idEstudiante,
+                    Referencia: pago.referencia || pago.Referencia || null,
+                    Monto_bs,
+                    Tasa_Pago,
+                    Monto_usd,
+                    Fecha_pago
+                });
+
+                // Si vienen pagos parciales, registrarlos
+                if (Array.isArray(pago.parciales)) {
+                    for (const parcial of pago.parciales) {
+                        const montoPar = Number(parcial.monto);
+                        if (!isNaN(montoPar)) {
+                            await Estudiante.createPagoParcial({ idPago, idDeuda: parcial.idDeuda || pago.idDeuda || null, Monto_parcial: montoPar });
+                        }
+                    }
+                }
+                // anexar idPago al resultado
+                return res.json({ success: true, idEstudiante, idPago });
+            } catch (payErr) {
+                console.error('Error registrando pago al crear inscripción:', payErr);
+                return res.status(500).json({ success: false, message: 'Error al registrar pago.' });
+            }
         }
 
         return res.json({ success: true, idEstudiante });
