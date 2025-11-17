@@ -27,6 +27,28 @@
         <main class="content-area">
             <h1>Estudiantes</h1>
 
+            <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
+                <label for="tasa-input" style="margin-right:6px; font-weight:600;">Valor del Dólar (BS → USD):</label>
+                <input id="tasa-input" type="number" step="0.0001" style="width:130px;" placeholder="0.00">
+                <button id="tasa-save-btn">Guardar Tasa</button>
+                <button id="tasa-hist-btn" title="Ver historial de tasas">Historial</button>
+                <span id="tasa-msg" style="margin-left:8px;color:#2a7;display:none;"></span>
+            </div>
+
+            <!-- Historial de tasas modal -->
+            <div id="tasa-hist-modal" class="modal" style="display:none;">
+                <div class="modal-content large">
+                    <span class="close-button" id="close-tasa-hist">&times;</span>
+                    <h2>Historial de Tasas</h2>
+                    <div style="max-height:400px; overflow:auto;">
+                        <table style="width:100%; border-collapse:collapse;">
+                            <thead><tr><th style="text-align:left;padding:6px">Fecha</th><th style="text-align:right;padding:6px">Tasa (USD → BS)</th></tr></thead>
+                            <tbody id="tasa-hist-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div style="margin: 12px 0;">
                 <button id="add-student-btn">Agregar Estudiante</button>
             </div>
@@ -173,7 +195,7 @@
                 </div>
 
                 <hr />
-                <h3>Pago (opcional)</h3>
+                <h3>Pago </h3>
                 <div class="input-group">
                     <label>Método de pago</label>
                     <select id="pay-metodo">
@@ -195,10 +217,10 @@
                     <label>Referencia</label>
                     <input type="text" id="pay-referencia" placeholder="Referencia / referencia pago móvil">
                 </div>
-                <div class="input-group">
+                <!--<div class="input-group">
                     <label>Cuenta destino (opcional)</label>
                     <input type="text" id="pay-cuenta" placeholder="idCuenta_Destino">
-                </div>
+                </div>-->
 
                 <button type="submit">Guardar Estudiante</button>
                 <p id="add-student-error" class="error-message"></p>

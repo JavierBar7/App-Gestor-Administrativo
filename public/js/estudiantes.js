@@ -240,6 +240,115 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Load current tasa (latest)
+    async function loadTasa() {
+        try {
+            const res = await fetch('http://localhost:3000/api/tasa/latest');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data && data.success && data.rate) {
+                const el = document.getElementById('tasa-input');
+                if (el) el.value = data.rate.Tasa_usd_a_bs;
+            }
+        } catch (err) {
+            console.error('Error cargando tasa actual:', err);
+        }
+    }
+
+    // Save new tasa to server
+    async function saveTasa() {
+        const input = document.getElementById('tasa-input');
+        const msg = document.getElementById('tasa-msg');
+        if (!input) return;
+        const val = input.value;
+        if (val == null || val === '' || isNaN(Number(val))) {
+            if (msg) {
+                msg.style.display = 'inline';
+                msg.style.color = '#c33';
+                msg.textContent = 'Valor inválido';
+            }
+            return;
+        }
+        try {
+            const res = await fetch('http://localhost:3000/api/tasa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Tasa_usd_a_bs: Number(val) })
+            });
+            if (!res.ok) {
+                // Try to read text to provide a helpful message
+                const txt = await res.text().catch(() => null);
+                console.error('Error guardando tasa (HTTP ' + res.status + '):', txt);
+                if (msg) {
+                    msg.style.display = 'inline';
+                    msg.style.color = '#c33';
+                    msg.textContent = txt || ('Error HTTP ' + res.status);
+                }
+            } else {
+                // parse JSON safely
+                let data = null;
+                try { data = await res.json(); } catch (e) { data = null; }
+                if (data && data.success) {
+                    if (msg) {
+                        msg.style.display = 'inline';
+                        msg.style.color = '#2a7';
+                        msg.textContent = 'Tasa guardada';
+                    }
+                } else {
+                    const txt = data && data.message ? data.message : 'Respuesta inesperada del servidor';
+                    if (msg) {
+                        msg.style.display = 'inline';
+                        msg.style.color = '#c33';
+                        msg.textContent = txt;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error guardando tasa:', err);
+            if (msg) {
+                msg.style.display = 'inline';
+                msg.style.color = '#c33';
+                msg.textContent = 'Error de conexión';
+            }
+        }
+        setTimeout(() => { if (msg) msg.style.display = 'none'; }, 3000);
+    }
+
+    // Load historial of tasas and render into modal
+    async function loadHistorial() {
+        const body = document.getElementById('tasa-hist-body');
+        if (!body) return;
+        body.innerHTML = '<tr><td colspan="2">Cargando...</td></tr>';
+        try {
+            const res = await fetch('http://localhost:3000/api/tasa/historial');
+            if (!res.ok) {
+                const txt = await res.text().catch(() => null);
+                body.innerHTML = `<tr><td colspan="2">Error cargando historial: ${res.status}</td></tr>`;
+                console.error('Error cargando historial tasa:', res.status, txt);
+                return;
+            }
+            const data = await res.json().catch(() => null);
+            if (!data || !data.success || !Array.isArray(data.historial)) {
+                body.innerHTML = '<tr><td colspan="2">No hay historial disponible.</td></tr>';
+                return;
+            }
+            if (data.historial.length === 0) {
+                body.innerHTML = '<tr><td colspan="2">No hay registros.</td></tr>';
+                return;
+            }
+            body.innerHTML = '';
+            data.historial.forEach(h => {
+                const tr = document.createElement('tr');
+                const fecha = h.Fecha_Registro ? (typeof h.Fecha_Registro === 'string' && h.Fecha_Registro.includes('T') ? h.Fecha_Registro.split('T')[0] : new Date(h.Fecha_Registro).toISOString().slice(0,10)) : '';
+                tr.innerHTML = `<td style="padding:6px">${fecha}</td><td style="padding:6px;text-align:right">${h.Tasa_Registrada != null ? Number(h.Tasa_Registrada).toFixed(4) : ''}</td>`;
+                body.appendChild(tr);
+            });
+        } catch (err) {
+            console.error('Error cargando historial tasa:', err);
+            body.innerHTML = '<tr><td colspan="2">Error de conexión</td></tr>';
+        }
+    }
+
     // Render group cards (summary endpoint)
     async function renderGroupCards() {
         try {
@@ -420,5 +529,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (logoutBtn) logoutBtn.addEventListener('click', () => window.electronAPI.logout());
     await loadGrupos();
     await loadMetodosPago();
+    await loadTasa();
+    // attach tasa save handler
+    const tasaSaveBtn = document.getElementById('tasa-save-btn');
+    if (tasaSaveBtn) tasaSaveBtn.addEventListener('click', (e) => { e.preventDefault(); saveTasa(); });
+    // attach historial button handler
+    const tasaHistBtn = document.getElementById('tasa-hist-btn');
+    const tasaHistModal = document.getElementById('tasa-hist-modal');
+    const closeTasaHistBtn = document.getElementById('close-tasa-hist');
+    if (tasaHistBtn && tasaHistModal) {
+        tasaHistBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            tasaHistModal.style.display = 'flex';
+            await loadHistorial();
+        });
+    }
+    if (closeTasaHistBtn && tasaHistModal) {
+        closeTasaHistBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            tasaHistModal.style.display = 'none';
+        });
+    }
     await renderGroupCards();
 });

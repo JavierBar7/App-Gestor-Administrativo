@@ -26,6 +26,9 @@ const cursoRoutes = require('../routes/cursoRoutes');
 const grupoRoutes = require('../routes/grupoRoutes');
 app.use('/api/cursos', cursoRoutes);
 app.use('/api/grupos', grupoRoutes);
+// Tasa de cambio (USD -> BS)
+const tasaRoutes = require('../routes/tasaRoutes');
+app.use('/api/tasa', tasaRoutes);
 
 // Request logging (simple)
 app.use((req, res, next) => {
@@ -44,4 +47,33 @@ app.get('/', (req, res) => {
     res.render('login'); 
 });
 
-app.listen(3000, () => console.log('Servidor corriendo en http://localhost:3000'));
+// Simple healthcheck
+app.get('/_health', (req, res) => res.json({ ok: true }));
+
+// Debug: list mounted routes (useful for troubleshooting)
+app.get('/_routes', (req, res) => {
+    try {
+        const routes = [];
+        app._router.stack.forEach(mw => {
+            if (mw.route && mw.route.path) {
+                const methods = Object.keys(mw.route.methods).join(',').toUpperCase();
+                routes.push({ path: mw.route.path, methods });
+            }
+        });
+        res.json({ routes });
+    } catch (err) {
+        res.status(500).json({ error: String(err) });
+    }
+});
+
+app.listen(3000, () => {
+    console.log('Servidor corriendo en http://localhost:3000', 'PID:', process.pid);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('UncaughtException:', err && err.stack ? err.stack : err);
+});
+
+process.on('unhandledRejection', (reason) => {
+    console.error('UnhandledRejection:', reason);
+});
