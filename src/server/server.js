@@ -21,6 +21,9 @@ app.use('/api/estudiantes', estudianteRoutes);
 // rutas para pagos/metodos
 const pagosRoutes = require('../routes/pagosRoutes');
 app.use('/api/metodos_pagos', pagosRoutes);
+// API for creating payments
+const pagosApiRoutes = require('../routes/pagosApiRoutes');
+app.use('/api/pagos', pagosApiRoutes);
 // Rutas para cursos y grupos
 const cursoRoutes = require('../routes/cursoRoutes');
 const grupoRoutes = require('../routes/grupoRoutes');

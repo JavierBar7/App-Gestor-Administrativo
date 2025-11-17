@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentGroupId = null;
     let currentGroupName = null;
+    let metodosCache = [];
 
     // Render students for a specific group (fetches /api/grupos/:id/estudiantes)
     async function renderStudentsForGroup(idGrupo, groupName) {
@@ -90,6 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td>—</td>
                             <td>
                                 <button class="edit-student" data-id="${s.idEstudiante}">Editar</button>
+                                <button class="register-payment" data-id="${s.idEstudiante}" style="margin-left:8px;">Registrar Pago</button>
                             </td>
                         `;
                         studentsTbody.appendChild(tr);
@@ -157,10 +159,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             // show modal
                             document.getElementById('student-details-modal').style.display = 'flex';
+                            // Actions are provided in the table's actions column; no injection needed here.
                         } catch (err) {
                             console.error('Error cargando detalles:', err);
                             alert('Error cargando detalles del estudiante');
                         }
+                    });
+                });
+
+                // attach click handler to register-payment buttons in the actions column
+                studentsTbody.querySelectorAll('.register-payment').forEach(btn => {
+                    btn.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        const id = btn.getAttribute('data-id');
+                        openRegisterPaymentModal(id);
                     });
                 });
 
@@ -225,14 +237,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const res = await fetch('http://localhost:3000/api/metodos_pagos/metodos');
             const metodos = await res.json();
+            metodosCache = Array.isArray(metodos) ? metodos : [];
             const select = document.getElementById('pay-metodo');
+            const modalSelect = document.getElementById('pay-method-modal');
             if (select) {
                 select.innerHTML = '<option value="">-- Seleccione método --</option>';
-                (Array.isArray(metodos) ? metodos : []).forEach(m => {
+                metodosCache.forEach(m => {
                     const opt = document.createElement('option');
                     opt.value = m.idMetodos_pago;
                     opt.textContent = `${m.Nombre} (${m.Moneda_asociada || ''})`;
                     select.appendChild(opt);
+                });
+            }
+            if (modalSelect) {
+                modalSelect.innerHTML = '<option value="">-- Seleccione método --</option>';
+                metodosCache.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.idMetodos_pago;
+                    opt.textContent = `${m.Nombre} (${m.Moneda_asociada || ''})`;
+                    modalSelect.appendChild(opt);
                 });
             }
         } catch (err) {
@@ -249,6 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (data && data.success && data.rate) {
                 const el = document.getElementById('tasa-input');
                 if (el) el.value = data.rate.Tasa_usd_a_bs;
+                window.__currentTasa = Number(data.rate.Tasa_usd_a_bs) || null;
             }
         } catch (err) {
             console.error('Error cargando tasa actual:', err);
@@ -385,6 +409,184 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- Payment modal helpers ---
+    function clearBilletesList() {
+        const container = document.getElementById('pay-billetes-list');
+        if (!container) return;
+        container.innerHTML = '';
+    }
+
+    function addBilleteRow(billete) {
+        const container = document.getElementById('pay-billetes-list');
+        if (!container) return;
+        const idx = Date.now();
+        const row = document.createElement('div');
+        row.className = 'billete-row';
+        row.style.display = 'flex';
+        row.style.gap = '8px';
+        row.style.marginBottom = '6px';
+        row.innerHTML = `
+            <input placeholder="Denominación" data-denom id="bil-den-${idx}" value="${billete && billete.Denominacion ? billete.Denominacion : ''}">
+            <input placeholder="Código / Serial" data-cod id="bil-cod-${idx}" value="${billete && billete.Codigo_billete ? billete.Codigo_billete : ''}">
+            <button type="button" data-remove>Eliminar</button>
+        `;
+        container.appendChild(row);
+        const removeBtn = row.querySelector('[data-remove]');
+        removeBtn.addEventListener('click', () => row.remove());
+    }
+
+    function openRegisterPaymentModal(idEstudiante) {
+        const modal = document.getElementById('register-payment-modal');
+        if (!modal) return;
+        document.getElementById('pay-idEstudiante').value = idEstudiante;
+        // reset fields
+        document.getElementById('pay-method-modal').value = '';
+        document.getElementById('pay-monto-transfer').value = '';
+        document.getElementById('pay-referencia-transfer').value = '';
+        document.getElementById('pay-monto-efectivo').value = '';
+        document.getElementById('pay-monto-cash').value = '';
+        document.getElementById('pay-monto-parcial').value = '';
+        clearBilletesList();
+        modal.style.display = 'flex';
+    }
+
+    // Wire modal controls
+    const registerPaymentModal = document.getElementById('register-payment-modal');
+    const closeRegisterPaymentBtn = document.getElementById('close-register-payment');
+    if (closeRegisterPaymentBtn && registerPaymentModal) {
+        closeRegisterPaymentBtn.addEventListener('click', (e) => { e.preventDefault(); registerPaymentModal.style.display = 'none'; });
+    }
+
+    // add billete button
+    const payAddBilleteBtn = document.getElementById('pay-add-billete');
+    if (payAddBilleteBtn) {
+        payAddBilleteBtn.addEventListener('click', (e) => { e.preventDefault(); addBilleteRow(); });
+    }
+
+    // method change handler to show appropriate section
+    const payMethodModalSel = document.getElementById('pay-method-modal');
+    if (payMethodModalSel) {
+        payMethodModalSel.addEventListener('change', (e) => {
+            const sel = payMethodModalSel.value;
+            const method = metodosCache.find(m => String(m.idMetodos_pago) === String(sel));
+            const name = method ? String(method.Nombre || '').toLowerCase() : '';
+            const tipo = method ? String(method.Tipo_Validacion || '').toLowerCase() : '';
+            // hide all
+            document.getElementById('pay-section-transfer').style.display = 'none';
+            document.getElementById('pay-section-efectivo').style.display = 'none';
+            document.getElementById('pay-section-cash').style.display = 'none';
+            // show transfer section for transfer OR for pago movil (they share same fields)
+            if (name.includes('transfer') || name.includes('transferencia') || tipo.includes('movil') || name.includes('pago movil') || name.includes('movil')) {
+                document.getElementById('pay-section-transfer').style.display = 'block';
+            } else if (name.includes('efectivo') || tipo.includes('efectivo')) {
+                document.getElementById('pay-section-efectivo').style.display = 'block';
+            } else if (name.includes('cash') || tipo.includes('cash')) {
+                document.getElementById('pay-section-cash').style.display = 'block';
+            }
+        });
+    }
+
+    // compute equivalents when amounts change
+    function computeEquivalent(bsAmount) {
+        const tasa = window.__currentTasa || null;
+        if (!tasa || !bsAmount) return '—';
+        const usd = Number((Number(bsAmount) / tasa).toFixed(4));
+        return usd;
+    }
+
+    document.addEventListener('input', (e) => {
+        if (!e.target) return;
+        if (e.target.id === 'pay-monto-transfer') {
+            const val = e.target.value; document.getElementById('pay-equivalent-transfer').textContent = computeEquivalent(val);
+        } else if (e.target.id === 'pay-monto-efectivo') {
+            const val = e.target.value; document.getElementById('pay-equivalent-efectivo').textContent = computeEquivalent(val);
+        } else if (e.target.id === 'pay-monto-cash') {
+            // optionally show equivalent somewhere
+        }
+    });
+
+    // submit payment handler
+    const registerPaymentForm = document.getElementById('register-payment-form');
+    if (registerPaymentForm) {
+        registerPaymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const idEstudiante = document.getElementById('pay-idEstudiante').value;
+            const metodoId = document.getElementById('pay-method-modal').value;
+            if (!idEstudiante || !metodoId) return alert('Seleccione método y estudiante');
+
+            const methodObj = metodosCache.find(m => String(m.idMetodos_pago) === String(metodoId));
+            const name = methodObj ? String(methodObj.Nombre || '').toLowerCase() : '';
+
+            let payload = { idEstudiante: Number(idEstudiante), metodoId: Number(metodoId) };
+
+            // Decide by Tipo_Validacion OR Nombre (covers Pago Móvil entries configured in DB)
+            const tipo = methodObj ? String(methodObj.Tipo_Validacion || '').toLowerCase() : '';
+            if (name.includes('transfer') || name.includes('transferencia') || tipo.includes('movil') || name.includes('pago movil') || name.includes('movil')) {
+                const monto = Number(document.getElementById('pay-monto-transfer').value || 0);
+                const referencia = document.getElementById('pay-referencia-transfer').value || null;
+                payload.monto = monto;
+                payload.moneda = 'bs';
+                payload.referencia = referencia;
+                // If this is Pago Móvil, ensure referencia and monto are provided
+                if (tipo.includes('movil') || name.includes('pago movil') || name.includes('movil')) {
+                    if (!referencia || String(referencia).trim() === '') return alert('Pago móvil requiere referencia de la transacción');
+                    if (isNaN(monto) || monto <= 0) return alert('Pago móvil requiere el monto de la transacción');
+                }
+            } else if (name.includes('efectivo')) {
+                const monto = Number(document.getElementById('pay-monto-efectivo').value || 0);
+                payload.monto = monto;
+                payload.moneda = 'bs';
+            } else if (name.includes('cash')) {
+                const monto = Number(document.getElementById('pay-monto-cash').value || 0);
+                payload.monto = monto;
+                payload.moneda = 'bs';
+                // collect billetes
+                const billetes = [];
+                const container = document.getElementById('pay-billetes-list');
+                if (container) {
+                    const rows = container.querySelectorAll('.billete-row');
+                    rows.forEach(r => {
+                        const denomEl = r.querySelector('[data-denom]');
+                        const codEl = r.querySelector('[data-cod]');
+                        if (denomEl && codEl) {
+                            const denom = Number(denomEl.value || 0);
+                            const cod = codEl.value || null;
+                            if (denom > 0 && cod) billetes.push({ Codigo_billete: cod, Denominacion: denom });
+                        }
+                    });
+                }
+                payload.billetes = billetes;
+            }
+
+            // optional parcial
+            const parcialVal = Number(document.getElementById('pay-monto-parcial').value || 0);
+            if (parcialVal && parcialVal > 0) {
+                payload.parciales = [{ monto: parcialVal }];
+            }
+
+            try {
+                const res = await fetch('http://localhost:3000/api/pagos', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const data = await res.json().catch(() => null);
+                if (data && data.success) {
+                    alert('Pago registrado');
+                    registerPaymentModal.style.display = 'none';
+                    // refresh student details (re-fetch)
+                    const btn = document.querySelector('.student-name[data-id="' + idEstudiante + '"]');
+                    if (btn) btn.click();
+                } else {
+                    alert((data && data.message) || 'Error registrando pago');
+                }
+            } catch (err) {
+                console.error('Error registrando pago:', err);
+                alert('Error conectando al servidor');
+            }
+        });
+    }
+
+    // Validate pago data in add-student form when provided (require referencia for Pago Móvil)
+
     if (addStudentBtn) {
         addStudentBtn.addEventListener('click', () => {
             // prepare modal for new student
@@ -458,6 +660,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     referencia: document.getElementById('pay-referencia') ? document.getElementById('pay-referencia').value : null,
                     idCuenta_Destino: document.getElementById('pay-cuenta') ? document.getElementById('pay-cuenta').value : null
                 };
+                // Validate Pago Móvil requirements if method is Pago Móvil
+                try {
+                    const mid = payload.pago.metodoId;
+                    const methodObj = metodosCache.find(m => String(m.idMetodos_pago) === String(mid));
+                    const mname = methodObj ? String(methodObj.Nombre || '').toLowerCase() : '';
+                    const mtipo = methodObj ? String(methodObj.Tipo_Validacion || '').toLowerCase() : '';
+                    const isMovil = mtipo.includes('movil') || mname.includes('pago movil') || mname.includes('movil');
+                    if (isMovil) {
+                        const ref = payload.pago.referencia;
+                        const m = Number(payload.pago.monto || 0);
+                        if (!ref || String(ref).trim() === '') {
+                            const errEl = document.getElementById('add-student-error');
+                            errEl.textContent = 'Pago móvil requiere referencia de la transacción';
+                            errEl.classList.add('visible');
+                            return;
+                        }
+                        if (isNaN(m) || m <= 0) {
+                            const errEl = document.getElementById('add-student-error');
+                            errEl.textContent = 'Pago móvil requiere el monto de la transacción';
+                            errEl.classList.add('visible');
+                            return;
+                        }
+                    }
+                } catch (vErr) {
+                    console.warn('Validación Pago Móvil (add-student) falló:', vErr);
+                }
             }
             const edad = calcularEdad(payload.Fecha_Nacimiento);
             if (edad < 18) {
