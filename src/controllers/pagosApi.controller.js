@@ -63,11 +63,38 @@ exports.createPayment = async (req, res) => {
             idCuenta_Destino: payload.idCuenta_Destino || null,
             idEstudiante,
             Referencia: referencia,
+            Mes_referencia: payload.Mes_referencia || null,
             Monto_bs,
             Tasa_Pago,
             Monto_usd,
             Fecha_pago
         });
+
+        // If a month reference or group is provided, attempt to create a control_mensualidades record
+        try {
+            const mesRef = payload.Mes_referencia || payload.Mes || null;
+            const observacion = payload.Observacion || payload.Observacion_control || null;
+            const idGrupoControl = payload.idGrupo || payload.idGrupo_control || null;
+            if (mesRef) {
+                // Insert using STR_TO_DATE to accept 'YYYY-MM' from frontend (input[type=month])
+                await conn.promise().query(
+                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Observacion, idGrupo)
+                     VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?, ?)`,
+                    [idEstudiante, idPago, mesRef, observacion, idGrupoControl]
+                );
+            } else if (idGrupoControl) {
+                // If only group provided, insert with current month
+                const todayMonth = new Date().toISOString().slice(0,7); // 'YYYY-MM'
+                await conn.promise().query(
+                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Observacion, idGrupo)
+                     VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?, ?)`,
+                    [idEstudiante, idPago, todayMonth, observacion, idGrupoControl]
+                );
+            }
+        } catch (cmErr) {
+            // Don't fail the payment if control insertion fails; log for debugging
+            console.warn('No se pudo insertar control_mensualidades:', cmErr && cmErr.message ? cmErr.message : cmErr);
+        }
 
         // parciales: array of { monto, idDeuda? }
         if (parciales.length) {

@@ -70,7 +70,13 @@
 
     static async getLastPaymentsForStudent(idEstudiante, limit = 3) {
         const [rows] = await conn.promise().query(
-            'SELECT idPago, Monto_usd, Fecha_pago FROM pagos WHERE idEstudiante = ? ORDER BY Fecha_pago DESC LIMIT ?',
+            `SELECT p.idPago, p.Referencia, p.Monto_bs, p.Monto_usd, p.Fecha_pago,
+                    cm.Mes AS Mes_control, cm.Observacion, cm.idGrupo AS idGrupo_control, g.Nombre_Grupo AS Grupo_nombre
+             FROM pagos p
+             LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago AND cm.idEstudiante = p.idEstudiante
+             LEFT JOIN grupos g ON g.idGrupo = cm.idGrupo
+             WHERE p.idEstudiante = ?
+             ORDER BY p.Fecha_pago DESC LIMIT ?`,
             [idEstudiante, Number(limit)]
         );
         return rows;
@@ -83,12 +89,25 @@
         return rows && rows.length ? rows[0].Tasa_usd_a_bs : null;
     }
 
-    static async createPago({ idDeuda = null, idMetodos_pago = null, idCuenta_Destino = null, idEstudiante = null, Referencia = null, Monto_bs = null, Tasa_Pago = null, Monto_usd = null, Fecha_pago = null }) {
-        const [result] = await conn.promise().query(
-            'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
-        );
-        return result.insertId;
+    static async createPago({ idDeuda = null, idMetodos_pago = null, idCuenta_Destino = null, idEstudiante = null, Referencia = null, Mes_referencia = null, Monto_bs = null, Tasa_Pago = null, Monto_usd = null, Fecha_pago = null }) {
+        // Try to insert including Mes_referencia if the column exists; fallback to legacy insert if not
+        try {
+            const [result] = await conn.promise().query(
+                'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Mes_referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Mes_referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
+            );
+            return result.insertId;
+        } catch (err) {
+            // If Mes_referencia column doesn't exist, fall back to original insert
+            if (err && err.code === 'ER_BAD_FIELD_ERROR') {
+                const [result] = await conn.promise().query(
+                    'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
+                );
+                return result.insertId;
+            }
+            throw err;
+        }
     }
 
     static async createPagoParcial({ idPago = null, idDeuda = null, Monto_parcial = null }) {
@@ -116,8 +135,13 @@
 
     static async getPaymentsByStudent(idEstudiante) {
         const [rows] = await conn.promise().query(
-            `SELECT idPago, idDeuda, idMetodos_pago, Referencia, Monto_bs, Monto_usd, Fecha_pago
-             FROM pagos WHERE idEstudiante = ? ORDER BY Fecha_pago DESC`, [idEstudiante]
+            `SELECT p.idPago, p.idDeuda, p.idMetodos_pago, p.Referencia, p.Monto_bs, p.Monto_usd, p.Fecha_pago,
+                    cm.Mes AS Mes_control, cm.Observacion, cm.idGrupo AS idGrupo_control, g.Nombre_Grupo AS Grupo_nombre
+             FROM pagos p
+             LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago AND cm.idEstudiante = p.idEstudiante
+             LEFT JOIN grupos g ON g.idGrupo = cm.idGrupo
+             WHERE p.idEstudiante = ?
+             ORDER BY p.Fecha_pago DESC`, [idEstudiante]
         );
         return rows;
     }

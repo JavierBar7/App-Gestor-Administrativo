@@ -27,21 +27,47 @@ const listGrupos = async (req, res) => {
 // Summary: return groups with course name and student count
 const summaryGrupos = async (req, res) => {
     try {
-        const grupos = await Grupo.findAll();
-        // need Curso model to get course name and count inscripciones per grupo
+        // Use a single aggregated query to avoid per-row DB errors and improve performance
         const conn = require('../../config/database');
-        const results = [];
-        for (const g of grupos) {
-            const [cursoRows] = await conn.promise().query('SELECT Nombre_Curso FROM cursos WHERE idCurso = ?', [g.idCurso]);
-            const cursoNombre = cursoRows[0] ? cursoRows[0].Nombre_Curso : null;
-            const [countRows] = await conn.promise().query('SELECT COUNT(*) as cnt FROM inscripciones WHERE idGrupo = ?', [g.idGrupo]);
-            const cnt = countRows[0] ? countRows[0].cnt : 0;
-            results.push({ idGrupo: g.idGrupo, idCurso: g.idCurso, Nombre_Grupo: g.Nombre_Grupo, Fecha_inicio: g.Fecha_inicio, Estado: g.Estado, Nombre_Curso: cursoNombre, studentCount: cnt });
+        // Check whether inscripciones.idGrupo column exists in this database
+        const [colCheck] = await conn.promise().query(
+            "SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inscripciones' AND COLUMN_NAME = 'idGrupo'"
+        );
+        const hasIdGrupo = colCheck && colCheck[0] && colCheck[0].cnt > 0;
+
+        if (hasIdGrupo) {
+            const sql = `
+                SELECT g.idGrupo, g.idCurso, g.Nombre_Grupo, g.Fecha_inicio, g.Estado,
+                       c.Nombre_Curso,
+                       COUNT(i.idEstudiante) AS studentCount
+                FROM grupos g
+                LEFT JOIN cursos c ON c.idCurso = g.idCurso
+                LEFT JOIN inscripciones i ON i.idGrupo = g.idGrupo
+                GROUP BY g.idGrupo, g.idCurso, g.Nombre_Grupo, g.Fecha_inicio, g.Estado, c.Nombre_Curso
+                ORDER BY g.Nombre_Grupo ASC
+            `;
+            const [rows] = await conn.promise().query(sql);
+            return res.json(rows || []);
+        } else {
+            // Fallback: return groups with course name but no per-group student count (column missing in DB)
+            const sqlFallback = `
+                SELECT g.idGrupo, g.idCurso, g.Nombre_Grupo, g.Fecha_inicio, g.Estado,
+                       c.Nombre_Curso,
+                       0 AS studentCount
+                FROM grupos g
+                LEFT JOIN cursos c ON c.idCurso = g.idCurso
+                ORDER BY g.Nombre_Grupo ASC
+            `;
+            const [rows] = await conn.promise().query(sqlFallback);
+            const resp = { data: rows || [] };
+            if (process.env.NODE_ENV !== 'production') resp.note = 'Column inscripciones.idGrupo not found; student counts unavailable.';
+            return res.json(resp.data || []);
         }
-        return res.json(results);
     } catch (error) {
-        console.error('Error en summaryGrupos:', error);
-        return res.status(500).json({ success: false, message: 'Error al obtener resumen de grupos' });
+        console.error('Error en summaryGrupos:', error && error.stack ? error.stack : error);
+        const resp = { success: false, message: 'Error al obtener resumen de grupos' };
+        if (process.env.NODE_ENV !== 'production' && error && error.message) resp.error = error.message;
+        return res.status(500).json(resp);
     }
 };
 

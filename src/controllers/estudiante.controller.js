@@ -90,24 +90,48 @@ exports.createEstudiante = async (req, res) => {
             }
         }
 
-        // registrar inscripción: aceptamos idCurso directamente o idGrupo (preferible)
-        let idCursoParaInscripcion = null;
-        if (payload.idGrupo) {
-            // resolver idCurso desde tabla grupos
-            const grupo = await Grupo.findById(payload.idGrupo);
-            if (!grupo) {
-                return res.status(400).json({ success: false, message: 'Grupo seleccionado no existe' });
-            }
-            idCursoParaInscripcion = grupo.idCurso;
-        } else if (payload.idCurso) {
-            idCursoParaInscripcion = payload.idCurso;
-        }
-
-        if (idCursoParaInscripcion) {
+        // registrar inscripción: permitimos varios grupos mediante payload.grupos (array de idGrupo)
+        if (Array.isArray(payload.grupos) && payload.grupos.length > 0) {
             const fechaIns = payload.Fecha_inscripcion || new Date().toISOString().slice(0,10);
-            // pass idGrupo when available so inscripcion links to the group
-            const idGrupoForIns = payload.idGrupo || null;
-            await Estudiante.createInscripcion(idEstudiante, idCursoParaInscripcion, fechaIns, idGrupoForIns);
+            // iterate groups and create inscripciones for each valid group
+            const invalidGroups = [];
+            for (const gid of payload.grupos) {
+                try {
+                    const grupo = await Grupo.findById(gid);
+                    if (!grupo) {
+                        invalidGroups.push(gid);
+                        continue;
+                    }
+                    await Estudiante.createInscripcion(idEstudiante, grupo.idCurso, fechaIns, gid);
+                } catch (gErr) {
+                    console.error('Error creando inscripcion para grupo', gid, gErr);
+                    invalidGroups.push(gid);
+                }
+            }
+            if (invalidGroups.length === payload.grupos.length) {
+                // no inscripciones válidas
+                return res.status(400).json({ success: false, message: 'Ningún grupo válido fue encontrado para la inscripción.' });
+            }
+        } else {
+            // backward-compatible single inscripcion via idGrupo or idCurso
+            let idCursoParaInscripcion = null;
+            if (payload.idGrupo) {
+                // resolver idCurso desde tabla grupos
+                const grupo = await Grupo.findById(payload.idGrupo);
+                if (!grupo) {
+                    return res.status(400).json({ success: false, message: 'Grupo seleccionado no existe' });
+                }
+                idCursoParaInscripcion = grupo.idCurso;
+            } else if (payload.idCurso) {
+                idCursoParaInscripcion = payload.idCurso;
+            }
+
+            if (idCursoParaInscripcion) {
+                const fechaIns = payload.Fecha_inscripcion || new Date().toISOString().slice(0,10);
+                // pass idGrupo when available so inscripcion links to the group
+                const idGrupoForIns = payload.idGrupo || null;
+                await Estudiante.createInscripcion(idEstudiante, idCursoParaInscripcion, fechaIns, idGrupoForIns);
+            }
         }
 
         // Registrar pago si se envió información de pago en el payload
@@ -153,6 +177,7 @@ exports.createEstudiante = async (req, res) => {
                     idCuenta_Destino: pago.idCuenta_Destino || null,
                     idEstudiante,
                     Referencia: pago.referencia || pago.Referencia || null,
+                    Mes_referencia: pago.Mes_referencia || pago.Mes || null,
                     Monto_bs,
                     Tasa_Pago,
                     Monto_usd,
@@ -171,14 +196,24 @@ exports.createEstudiante = async (req, res) => {
                 // anexar idPago al resultado
                 return res.json({ success: true, idEstudiante, idPago });
             } catch (payErr) {
-                console.error('Error registrando pago al crear inscripción:', payErr);
-                return res.status(500).json({ success: false, message: 'Error al registrar pago.' });
+                console.error('Error registrando pago al crear inscripción:', payErr && payErr.stack ? payErr.stack : payErr);
+                const resp = { success: false, message: 'Error al registrar pago.' };
+                if (process.env.NODE_ENV !== 'production' && payErr && payErr.message) resp.error = payErr.message;
+                return res.status(500).json(resp);
             }
         }
 
         return res.json({ success: true, idEstudiante });
     } catch (error) {
-        console.error('Error creando estudiante:', error);
-        return res.status(500).json({ success: false, message: 'Error al crear estudiante' });
+        console.error('Error creando estudiante:', error && error.stack ? error.stack : error);
+        // Handle duplicate key error for unique fields like Cedula/Correo
+        if (error && error.code === 'ER_DUP_ENTRY') {
+            const resp = { success: false, message: 'Entrada duplicada en la base de datos.' };
+            if (process.env.NODE_ENV !== 'production' && error && error.message) resp.error = error.message;
+            return res.status(409).json(resp);
+        }
+        const resp = { success: false, message: 'Error al crear estudiante' };
+        if (process.env.NODE_ENV !== 'production' && error && error.message) resp.error = error.message;
+        return res.status(500).json(resp);
     }
 };

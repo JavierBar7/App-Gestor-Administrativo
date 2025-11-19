@@ -25,6 +25,46 @@ body {
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
+    position: relative; /* allow absolute positioning of logout button */
+}
+
+/* Logout button container pinned to bottom-right of sidebar */
+.sidebar .logout-container {
+    position: absolute;
+    bottom: 18px; /* distance from bottom */
+    right: 18px;  /* distance from right */
+    display: flex;
+    align-items: center;
+}
+.sidebar .logout-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+.sidebar .logout-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    background-color: rgba(255,255,255,0.04);
+}
+.sidebar .logout-btn:active {
+    transform: translateY(0) scale(0.99);
+}
+.sidebar .logout-btn img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    transition: transform 0.12s ease, filter 0.12s ease;
+    filter: invert(1);
+}
+.sidebar .logout-btn:hover img {
+    transform: scale(1.12);
+    filter: invert(0.95) drop-shadow(0 2px 4px rgba(0,0,0,0.35));
 }
 
 .sidebar-header {
@@ -274,6 +314,16 @@ table tbody tr:hover {
 
 #add-student-form > div:nth-child(7) { 
     grid-column: span 2;
+}
+
+/* helper row to place two input-groups side-by-side inside the two-column form */
+.row-two {
+    grid-column: span 2;
+    display: flex;
+    gap: 12px;
+}
+.row-two .input-group {
+    flex: 1 1 0;
 }
 
 #add-student-form > div:last-of-type, 

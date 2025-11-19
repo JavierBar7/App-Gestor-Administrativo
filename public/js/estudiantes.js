@@ -136,11 +136,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 data.pagos.forEach(p => {
                                     const row = document.createElement('tr');
                                     const fecha = p.Fecha_pago ? (typeof p.Fecha_pago === 'string' && p.Fecha_pago.includes('T') ? p.Fecha_pago.split('T')[0] : new Date(p.Fecha_pago).toISOString().slice(0,10)) : '';
-                                    row.innerHTML = `<td>${fecha}</td><td>${p.Referencia || ''}</td><td>${p.Monto_bs != null ? p.Monto_bs : ''}</td><td>${p.Monto_usd != null ? p.Monto_usd : ''}</td>`;
+                                    const mes = formatMes(p.Mes_control || p.Mes_referencia || '', p.Fecha_pago);
+                                    const referencia = p.Referencia || '';
+                                    const grupo = p.Grupo_nombre || '';
+                                    const obs = p.Observacion || '';
+                                    const montoBs = p.Monto_bs != null ? p.Monto_bs : '';
+                                    const montoUsd = p.Monto_usd != null ? p.Monto_usd : '';
+                                    row.innerHTML = `<td>${fecha}</td><td>${mes}</td><td>${referencia}</td><td>${grupo}</td><td>${obs}</td><td>${montoBs}</td><td>${montoUsd}</td>`;
                                     pagosTbody.appendChild(row);
                                 });
                             } else {
-                                pagosTbody.innerHTML = '<tr><td colspan="4">No hay pagos registrados.</td></tr>';
+                                pagosTbody.innerHTML = '<tr><td colspan="7">No hay pagos registrados.</td></tr>';
                             }
 
                             // grupos
@@ -212,6 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load grupos to populate inscription select (maps to curso id internally)
     let gruposCache = [];
+    let selectedGrupos = []; // array of idGrupo selected via autocomplete
     async function loadGrupos() {
         try {
             const res = await fetch('http://localhost:3000/api/grupos');
@@ -226,6 +233,73 @@ document.addEventListener('DOMContentLoaded', async () => {
                     opt.textContent = `${g.Nombre_Grupo}`;
                     select.appendChild(opt);
                 });
+            }
+
+            // Setup autocomplete input for groups
+            const acInput = document.getElementById('ins-grupo-autocomplete');
+            const suggestionsEl = document.getElementById('ins-grupo-suggestions');
+            const selectedContainer = document.getElementById('ins-selected-grupos');
+
+            function renderSuggestions(list) {
+                if (!suggestionsEl) return;
+                suggestionsEl.innerHTML = '';
+                if (!list || list.length === 0) return;
+                const ul = document.createElement('ul');
+                ul.style.listStyle = 'none'; ul.style.padding = '6px'; ul.style.margin = '0'; ul.style.background = '#fff'; ul.style.border = '1px solid #ccc'; ul.style.maxHeight = '160px'; ul.style.overflow = 'auto'; ul.style.position = 'absolute'; ul.style.zIndex = 1000; ul.style.width = acInput ? acInput.offsetWidth + 'px' : '240px';
+                list.forEach(g => {
+                    const li = document.createElement('li');
+                    li.style.padding = '6px'; li.style.cursor = 'pointer';
+                    li.textContent = `${g.Nombre_Grupo} ${g.Nombre_Curso ? ' — ' + g.Nombre_Curso : ''}`;
+                    li.addEventListener('click', () => {
+                        addSelectedGrupo(g.idGrupo);
+                        if (acInput) acInput.value = '';
+                        renderSuggestions([]);
+                    });
+                    ul.appendChild(li);
+                });
+                suggestionsEl.appendChild(ul);
+            }
+
+            function renderSelectedGrupos() {
+                if (!selectedContainer) return;
+                selectedContainer.innerHTML = '';
+                selectedGrupos.forEach(id => {
+                    const g = gruposCache.find(x => String(x.idGrupo) === String(id));
+                    const chip = document.createElement('div');
+                    chip.style.padding = '6px 8px'; chip.style.border = '1px solid #ccc'; chip.style.borderRadius = '16px'; chip.style.background = '#f5f5f5'; chip.style.display = 'flex'; chip.style.alignItems = 'center'; chip.style.gap = '8px';
+                    chip.innerHTML = `<span>${g ? g.Nombre_Grupo : id}</span><button type="button" data-id="${id}" class="remove-grupo-btn" style="background:transparent;border:none;cursor:pointer;font-weight:700;color:#900;">&times;</button>`;
+                    selectedContainer.appendChild(chip);
+                    chip.querySelector('.remove-grupo-btn').addEventListener('click', (e) => { removeSelectedGrupo(id); });
+                });
+            }
+
+            function addSelectedGrupo(id) {
+                if (!id) return;
+                if (selectedGrupos.find(x => String(x) === String(id))) return; // avoid duplicates
+                selectedGrupos.push(id);
+                // also set hidden select for fallback
+                const sel = document.getElementById('ins-idGrupo'); if (sel) sel.value = id;
+                renderSelectedGrupos();
+            }
+
+            function removeSelectedGrupo(id) {
+                selectedGrupos = selectedGrupos.filter(x => String(x) !== String(id));
+                const sel = document.getElementById('ins-idGrupo'); if (sel) sel.value = selectedGrupos.length ? selectedGrupos[0] : '';
+                renderSelectedGrupos();
+            }
+
+            if (acInput) {
+                acInput.addEventListener('input', (e) => {
+                    const q = (e.target.value || '').trim().toLowerCase();
+                    if (!q) { renderSuggestions([]); return; }
+                    const matches = gruposCache.filter(g => (g.Nombre_Grupo || '').toLowerCase().includes(q) || (g.Nombre_Curso || '').toLowerCase().includes(q));
+                    // exclude already-selected
+                    const filtered = matches.filter(m => !selectedGrupos.find(x => String(x) === String(m.idGrupo))).slice(0, 20);
+                    renderSuggestions(filtered);
+                });
+
+                // hide suggestions on blur with slight delay to allow click
+                acInput.addEventListener('blur', () => { setTimeout(() => renderSuggestions([]), 150); });
             }
         } catch (err) {
             console.error('Error cargando grupos:', err);
@@ -256,6 +330,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                     opt.value = m.idMetodos_pago;
                     opt.textContent = `${m.Nombre} (${m.Moneda_asociada || ''})`;
                     modalSelect.appendChild(opt);
+                });
+            }
+            // also wire change handler for the add-student payment select to reflect pago movil behavior
+            const addPaySelect = document.getElementById('pay-metodo');
+            if (addPaySelect) {
+                addPaySelect.addEventListener('change', () => {
+                    const sel = addPaySelect.value;
+                    const method = metodosCache.find(m => String(m.idMetodos_pago) === String(sel));
+                    const name = method ? String(method.Nombre || '').toLowerCase() : '';
+                    const tipo = method ? String(method.Tipo_Validacion || '').toLowerCase() : '';
+                    // if pago movil, ensure referencia input is visible and show equivalent next to add-student monto
+                    const refEl = document.getElementById('pay-referencia');
+                    const montoEl = document.getElementById('pay-monto');
+                    let equivEl = document.getElementById('pay-equivalent-add');
+                    if (!equivEl && montoEl) {
+                        equivEl = document.createElement('div'); equivEl.id = 'pay-equivalent-add'; equivEl.textContent = '—'; montoEl.parentNode.appendChild(equivEl);
+                    }
+                    if (tipo.includes('movil') || name.includes('pago movil') || name.includes('movil')) {
+                        if (refEl) refEl.style.display = 'block';
+                        if (equivEl) equivEl.style.display = 'block';
+                    } else {
+                        if (refEl) refEl.style.display = 'block';
+                        if (equivEl) equivEl.style.display = 'none';
+                    }
                 });
             }
         } catch (err) {
@@ -494,12 +592,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         return usd;
     }
 
+    // Format Mes value to 'MM/YYYY'. Accepts several input formats:
+    // - 'YYYY-MM' (from <input type="month">)
+    // - 'YYYYMM' (numeric)
+    // - numeric month (1-12) -> use payment year or current year
+    // - otherwise returns original string
+    function formatMes(mesVal, fechaPago) {
+        if (mesVal === null || mesVal === undefined || mesVal === '') return '';
+        const s = String(mesVal).trim();
+        // YYYY-MM
+        const reYmDash = /^\d{4}-\d{2}$/;
+        if (reYmDash.test(s)) {
+            const [y, m] = s.split('-');
+            return `${m}/${y}`;
+        }
+        // YYYYMM
+        const reYm = /^\d{6}$/;
+        if (reYm.test(s)) {
+            const y = s.slice(0,4); const m = s.slice(4,6);
+            return `${m}/${y}`;
+        }
+        // pure year YYYY
+        const reY = /^\d{4}$/;
+        if (reY.test(s)) return s;
+        // numeric month
+        const num = Number(s);
+        if (!isNaN(num) && num >= 1 && num <= 12) {
+            let year = (fechaPago ? new Date(fechaPago).getFullYear() : null) || new Date().getFullYear();
+            return `${String(num).padStart(2,'0')}/${year}`;
+        }
+        return s;
+    }
+
     document.addEventListener('input', (e) => {
         if (!e.target) return;
         if (e.target.id === 'pay-monto-transfer') {
             const val = e.target.value; document.getElementById('pay-equivalent-transfer').textContent = computeEquivalent(val);
         } else if (e.target.id === 'pay-monto-efectivo') {
             const val = e.target.value; document.getElementById('pay-equivalent-efectivo').textContent = computeEquivalent(val);
+        } else if (e.target.id === 'pay-monto') {
+            const equivEl = document.getElementById('pay-equivalent-add');
+            if (equivEl) equivEl.textContent = computeEquivalent(e.target.value);
         } else if (e.target.id === 'pay-monto-cash') {
             // optionally show equivalent somewhere
         }
@@ -524,6 +657,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (name.includes('transfer') || name.includes('transferencia') || tipo.includes('movil') || name.includes('pago movil') || name.includes('movil')) {
                 const monto = Number(document.getElementById('pay-monto-transfer').value || 0);
                 const referencia = document.getElementById('pay-referencia-transfer').value || null;
+                const mesRef = document.getElementById('pay-mes-modal') ? document.getElementById('pay-mes-modal').value : null;
                 payload.monto = monto;
                 payload.moneda = 'bs';
                 payload.referencia = referencia;
@@ -532,12 +666,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!referencia || String(referencia).trim() === '') return alert('Pago móvil requiere referencia de la transacción');
                     if (isNaN(monto) || monto <= 0) return alert('Pago móvil requiere el monto de la transacción');
                 }
+                if (mesRef) payload.Mes_referencia = mesRef;
             } else if (name.includes('efectivo')) {
                 const monto = Number(document.getElementById('pay-monto-efectivo').value || 0);
+                const mesRef = document.getElementById('pay-mes-modal') ? document.getElementById('pay-mes-modal').value : null;
                 payload.monto = monto;
                 payload.moneda = 'bs';
+                if (mesRef) payload.Mes_referencia = mesRef;
             } else if (name.includes('cash')) {
                 const monto = Number(document.getElementById('pay-monto-cash').value || 0);
+                const mesRef = document.getElementById('pay-mes-modal') ? document.getElementById('pay-mes-modal').value : null;
                 payload.monto = monto;
                 payload.moneda = 'bs';
                 // collect billetes
@@ -556,6 +694,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
                 payload.billetes = billetes;
+                if (mesRef) payload.Mes_referencia = mesRef;
             }
 
             // optional parcial
@@ -631,11 +770,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         addStudentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             document.getElementById('add-student-error').classList.remove('visible');
-            const selectedGrupoId = document.getElementById('ins-idGrupo') ? document.getElementById('ins-idGrupo').value : null;
-            let mappedIdCurso = null;
-            if (selectedGrupoId) {
-                const found = gruposCache.find(g => String(g.idGrupo) === String(selectedGrupoId));
-                if (found) mappedIdCurso = found.idCurso;
+            // collect selected grupos from autocomplete. If none, fall back to select value
+            let gruposToSend = [];
+            if (selectedGrupos && selectedGrupos.length) {
+                gruposToSend = selectedGrupos.slice();
+            } else {
+                const selectedGrupoId = document.getElementById('ins-idGrupo') ? document.getElementById('ins-idGrupo').value : null;
+                if (selectedGrupoId) gruposToSend = [selectedGrupoId];
             }
             const payload = {
                 Nombres: document.getElementById('est-Nombres').value,
@@ -645,8 +786,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Telefono: document.getElementById('est-Telefono').value,
                 Correo: document.getElementById('est-Correo').value,
                 Direccion: document.getElementById('est-Direccion').value,
-                // Prefer enviar idGrupo para que el backend resuelva idCurso; también incluimos fecha de inscripción
-                idGrupo: selectedGrupoId || null,
+                // Enviar array `grupos` (ids) para inscribir en uno o varios grupos; también incluimos fecha de inscripción
+                grupos: gruposToSend,
                 Fecha_inscripcion: document.getElementById('ins-Fecha_inscripcion') ? document.getElementById('ins-Fecha_inscripcion').value : null
             };
 
@@ -656,6 +797,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 payload.pago = {
                     metodoId: document.getElementById('pay-metodo') ? document.getElementById('pay-metodo').value : null,
                     monto: document.getElementById('pay-monto').value,
+                    Mes_referencia: document.getElementById('pay-mes') ? document.getElementById('pay-mes').value : null,
                     moneda: document.getElementById('pay-moneda') ? document.getElementById('pay-moneda').value : 'bs',
                     referencia: document.getElementById('pay-referencia') ? document.getElementById('pay-referencia').value : null,
                     idCuenta_Destino: document.getElementById('pay-cuenta') ? document.getElementById('pay-cuenta').value : null

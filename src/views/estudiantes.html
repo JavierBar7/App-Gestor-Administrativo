@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estudiantes - Just Talk Academy</title>
     <link rel="stylesheet" href="../../public/gestion.css">
+    <link rel="stylesheet" href="../../public/estudiantes.css">
 </head>
 <body>
     <div class="dashboard-container">
@@ -19,7 +20,7 @@
                     <li><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
                     <li><a href="#" id="view-students-btn">Estudiantes</a></li>
                     <li><a href="#" id="view-cursos-btn">Cursos</a></li>
-                    <li><a href="#" id="logout-btn">Cerrar Sesión</a></li>
+                    <li class="logout-container"><button id="logout-btn" class="logout-btn" title="Cerrar sesión"><img src="../../public/MiLogOut.png" alt="Salir"/></button></li>
                 </ul>
             </nav>
         </aside>
@@ -86,12 +87,18 @@
                 <div id="details-body">
                     <section>
                         <h3>Datos personales</h3>
-                        <p id="det-nombre"></p>
-                        <p id="det-cedula"></p>
-                        <p id="det-fecha-nac"></p>
-                        <p id="det-telefono"></p>
-                        <p id="det-correo"></p>
-                        <p id="det-direccion"></p>
+                        <div style="display:flex; gap:24px; align-items:flex-start;">
+                            <div style="flex:1; min-width:200px;">
+                                <div style="margin-bottom:8px;"><strong>Nombre:</strong> <span id="det-nombre"></span></div>
+                                <div style="margin-bottom:8px;"><strong>Cédula:</strong> <span id="det-cedula"></span></div>
+                                <div style="margin-bottom:8px;"><strong>Fecha de Nacimiento:</strong> <span id="det-fecha-nac"></span></div>
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <div style="margin-bottom:8px;"><strong>Teléfono:</strong> <span id="det-telefono"></span></div>
+                                <div style="margin-bottom:8px;"><strong>Correo:</strong> <span id="det-correo"></span></div>
+                                <div style="margin-bottom:8px;"><strong>Dirección:</strong> <span id="det-direccion"></span></div>
+                            </div>
+                        </div>
                     </section>
 
                     <section>
@@ -102,17 +109,21 @@
                     <section>
                         <h3>Pagos</h3>
                         <table id="det-pagos-table">
-                            <thead><tr><th>Fecha</th><th>Referencia</th><th>Monto Bs</th><th>Monto USD</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Mes</th>
+                                    <th>Referencia</th>
+                                    <th>Grupo</th>
+                                    <th>Observación</th>
+                                    <th>Monto Bs</th>
+                                    <th>Monto USD</th>
+                                </tr>
+                            </thead>
                             <tbody></tbody>
                         </table>
                     </section>
 
-                    <section>
-                        <h3>Acciones</h3>
-                        <div id="det-acciones">
-                            <!-- actions injected per student (ej. Registrar pago) -->
-                        </div>
-                    </section>
 
                     <section>
                         <h3>Historial de Grupos</h3>
@@ -189,45 +200,23 @@
                     </div>
                 </div>
 
-                <div class="input-group" style="margin-top:10px;">
-                    <label>Grupo (para inscripción)</label>
-                    <select id="ins-idGrupo">
-                        <option value="">-- Seleccione un grupo --</option>
-                    </select>
+                <div class="row-two" style="margin-top:10px;">
+                        <div class="input-group">
+                            <label>Grupos (seleccione uno o más)</label>
+                            <input type="text" id="ins-grupo-autocomplete" placeholder="Buscar grupo..." autocomplete="off">
+                            <div id="ins-grupo-suggestions" class="suggestions" style="position:relative;"></div>
+                            <div id="ins-selected-grupos" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;"></div>
+                            <!-- Hidden fallback select (kept for backwards compatibility) -->
+                            <select id="ins-idGrupo" style="display:none;">
+                                <option value="">-- Seleccione un grupo --</option>
+                            </select>
+                        </div>
+                    <div class="input-group">
+                        <label>Fecha de inscripción</label>
+                        <input type="date" id="ins-Fecha_inscripcion" />
+                    </div>
                 </div>
 
-                <div class="input-group" style="margin-top:10px;">
-                    <label>Fecha de inscripción</label>
-                    <input type="date" id="ins-Fecha_inscripcion" />
-                </div>
-
-                <hr />
-                <h3>Pago </h3>
-                <div class="input-group">
-                    <label>Método de pago</label>
-                    <select id="pay-metodo">
-                        <option value="">-- Seleccione método --</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label>Monto</label>
-                    <input type="number" step="0.0001" id="pay-monto" placeholder="0.00">
-                </div>
-                <div class="input-group">
-                    <label>Moneda</label>
-                    <select id="pay-moneda">
-                        <option value="bs">Bs</option>
-                        <option value="usd">USD</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label>Referencia</label>
-                    <input type="text" id="pay-referencia" placeholder="Referencia / referencia pago móvil">
-                </div>
-                <!--<div class="input-group">
-                    <label>Cuenta destino (opcional)</label>
-                    <input type="text" id="pay-cuenta" placeholder="idCuenta_Destino">
-                </div>-->
 
                 <button type="submit">Guardar Estudiante</button>
                 <p id="add-student-error" class="error-message"></p>
@@ -251,6 +240,7 @@
                     <div class="input-group"><label>Monto (Bs)</label><input type="number" id="pay-monto-transfer" step="0.0001"></div>
                     <div class="input-group"><label>Referencia</label><input type="text" id="pay-referencia-transfer"></div>
                     <div class="input-group"><label>Equivale a USD</label><div id="pay-equivalent-transfer">—</div></div>
+                    <div class="input-group"><label>Mes al que refiere el pago</label><input type="month" id="pay-mes-modal"></div>
                 </div>
 
                 <div id="pay-section-efectivo" style="display:none;">
