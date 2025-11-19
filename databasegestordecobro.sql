@@ -7,9 +7,9 @@ USE DataBaseGestorDeCobro ;
   idRepresentante INT NOT NULL AUTO_INCREMENT,
   Nombres varchar(50) NOT NULL,
   Apellidos varchar(50) NOT NULL,
-  Cedula varchar(50) NOT NULL UNIQUE,
+  Cedula varchar(15) NOT NULL UNIQUE,
   Parentesco varchar(50) NOT NULL,
-  Correo varchar(100) DEFAULT NULL UNIQUE,
+  Correo varchar(50) DEFAULT NULL UNIQUE,
   Direccion varchar(100) NULL,
   PRIMARY KEY (idRepresentante)
 );
@@ -30,12 +30,24 @@ USE DataBaseGestorDeCobro ;
 	idEstudiante INT NOT NULL AUTO_INCREMENT,
     Nombres varchar(45) NOT NULL,
     Apellidos varchar(45) NOT NULL,
-    Cédula varchar (15) NOT NULL UNIQUE,
+    Cedula varchar (15) NOT NULL UNIQUE,
     Fecha_Nacimiento date NOT NULL,
     Telefono varchar(20) NOT NULL,
-    Correo varchar(45) NOT NULL UNIQUE, 
-    Dirección varchar(100) NOT NULL, 
+    Correo varchar(50) NOT NULL UNIQUE, 
+    Direccion varchar(100) NOT NULL, 
     primary key (idEstudiante)
+);
+
+CREATE TABLE historial_estado_estudiante (
+  idHistorial int NOT NULL AUTO_INCREMENT,
+  idEstudiante int NOT NULL,
+  Fecha_Cambio DATE NOT NULL,
+  Estado enum('Activo','Inactivo') NOT NULL,
+  Motivo varchar(50) DEFAULT NULL,
+  PRIMARY KEY (idHistorial),
+  KEY idEstudiante (idEstudiante),
+  FOREIGN KEY (idEstudiante) 
+  REFERENCES estudiantes (idEstudiante)
 );
 
 CREATE TABLE Representante_Estudiante (
@@ -78,7 +90,7 @@ CREATE TABLE Grupos (
   idGrupo int NOT NULL AUTO_INCREMENT,
   idCurso int NOT NULL,
   Nombre_Grupo varchar(50) NOT NULL,
-  Fecha_inicio datetime NOT NULL,
+  Fecha_inicio date NOT NULL,
   Estado varchar(50) NOT NULL,
   
   primary key (idGrupo),
@@ -96,8 +108,8 @@ CREATE TABLE Deudas (
   Monto_usd decimal(10,4) NOT NULL,
   Tasa_Emision DECIMAL(10,4) NOT NULL,
   Monto_bs_emision decimal(10,4) NOT NULL,
-  Fecha_emision datetime NOT NULL,
-  Fecha_vencimiento datetime NOT NULL,
+  Fecha_emision date NOT NULL,
+  Fecha_vencimiento date NOT NULL,
   Concepto varchar(45) NOT NULL,
   Estado varchar(45) NOT NULL,
    primary key (idDeuda),
@@ -129,11 +141,11 @@ CREATE TABLE Pagos (
   idMetodos_pago INT NOT NULL,
   idCuenta_Destino INT NOT NULL,
   idEstudiante INT NOT NULL,
-  Referencia VARCHAR(45) NOT NULL,
+  Referencia VARCHAR(20) NOT NULL,
   Monto_bs DECIMAL(10,4) NOT NULL, -- El monto real pagado en Bs
   Tasa_Pago DECIMAL(10,4) NOT NULL, -- La tasa vigente usada para este pago
   Monto_usd DECIMAL(10,4) NOT NULL, -- Conversión: Monto_bs / Tasa_Pago
-  Fecha_pago DATETIME NOT NULL,
+  Fecha_pago DATE NOT NULL,
   PRIMARY KEY (idPago),
   
 	foreign key(idDeuda) 
@@ -157,8 +169,8 @@ CREATE TABLE Ajustes_deuda (
   Tasa_Ajuste DECIMAL(10,4) NOT NULL,
   Tipo_ajuste varchar(45) NOT NULL,
   Monto_usd decimal(10,4) NOT NULL,
-  Fecha_ajuste datetime NOT NULL,
-  Descripcion varchar(45) NOT NULL,
+  Fecha_ajuste DATE NOT NULL,
+  Descripcion varchar(50) NOT NULL,
   primary key (idAjuste),
   
   foreign key(idDeuda) 
@@ -185,24 +197,47 @@ CREATE TABLE Pagos_parciales (
 CREATE TABLE historial_tasa (
   idHistorial_Tasa INT NOT NULL AUTO_INCREMENT,
   Tasa_Registrada DECIMAL(10,4) NOT NULL,
-  Fecha_Registro DATETIME NOT NULL,
+  Fecha_Registro DATE NOT NULL,
   PRIMARY KEY (idHistorial_Tasa)
 );
 
 CREATE TABLE Tasa_cambio (
   idTasa INT NOT NULL AUTO_INCREMENT,
-  Fecha_Vigencia DATETIME NOT NULL,
+  Fecha_Vigencia DATE NOT NULL,
   Tasa_usd_a_bs DECIMAL(10,4) NOT NULL,
   PRIMARY KEY (idTasa)
 );
 
+CREATE TABLE Billetes_cash (
+  idBillete INT NOT NULL AUTO_INCREMENT, -- Cambio realizado aquí
+  idPago INT NOT NULL,
+  Codigo_Billete VARCHAR(25) NOT NULL,
+  Denominacion DECIMAL(10,2),
+  PRIMARY KEY (idBillete),
+  FOREIGN KEY (idPago) REFERENCES Pagos (idPago) ON DELETE CASCADE
+);
+
+CREATE TABLE Control_mensualidades (
+  idControl INT NOT NULL AUTO_INCREMENT,
+  idEstudiante INT NOT NULL,
+  idPago INT NOT NULL,
+  Mes INT NOT NULL, -- 1 para Enero, 10 para Octubre, etc.
+  Observacion VARCHAR(50) NULL,
+  PRIMARY KEY (idControl),
+  UNIQUE KEY unique_pago_mes (idEstudiante, Mes), -- Evita duplicar pago del mismo mes
+    FOREIGN KEY (idEstudiante)
+    REFERENCES estudiantes (idEstudiante)
+    ON DELETE CASCADE,
+    FOREIGN KEY (idPago)
+    REFERENCES pagos (idPago)
+    ON DELETE CASCADE
+);
 -- Usuarios
 CREATE TABLE Roles (
   idRol INT NOT NULL AUTO_INCREMENT,
   Nombre_Rol VARCHAR(50) NOT NULL UNIQUE, -- Ej: 'Administrador', 'Gestor de Usuarios'
   PRIMARY KEY (idRol)
 );
-
 CREATE TABLE Usuarios (
   idUsuario INT NOT NULL AUTO_INCREMENT,
   idRol INT NOT NULL,
