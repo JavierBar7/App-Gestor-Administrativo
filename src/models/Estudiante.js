@@ -223,6 +223,81 @@
         );
         return rows;
     }
+
+    static async getPaymentSummary(idEstudiante) {
+        // Calculate months dynamically based on current date
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const nextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        const [rows] = await conn.promise().query(
+            `SELECT 
+                MAX(p.Fecha_pago) AS Ultimo_Pago,
+                SUM(p.Monto_usd) AS Total_Pagado_USD,
+                COUNT(*) AS Cantidad_Pagos,
+                (SELECT COALESCE(cm.Mes_date, p2.Fecha_pago)
+                 FROM pagos p2
+                 LEFT JOIN control_mensualidades cm ON cm.idPago = p2.idPago
+                 WHERE p2.idEstudiante = ? 
+                 ORDER BY p2.Fecha_pago DESC 
+                 LIMIT 1) AS Ultimo_Mes,
+                -- Pago mes pasado
+                (SELECT SUM(p3.Monto_usd)
+                 FROM pagos p3
+                 LEFT JOIN control_mensualidades cm3 ON cm3.idPago = p3.idPago
+                 WHERE p3.idEstudiante = ?
+                 AND (DATE_FORMAT(cm3.Mes_date, '%Y-%m') = ? 
+                      OR (cm3.Mes_date IS NULL AND DATE_FORMAT(p3.Fecha_pago, '%Y-%m') = ?))
+                ) AS Pago_Mes_Pasado,
+                -- Pago mes actual
+                (SELECT SUM(p4.Monto_usd)
+                 FROM pagos p4
+                 LEFT JOIN control_mensualidades cm4 ON cm4.idPago = p4.idPago
+                 WHERE p4.idEstudiante = ?
+                 AND (DATE_FORMAT(cm4.Mes_date, '%Y-%m') = ? 
+                      OR (cm4.Mes_date IS NULL AND DATE_FORMAT(p4.Fecha_pago, '%Y-%m') = ?))
+                ) AS Pago_Mes_Actual,
+                -- Pago mes próximo
+                (SELECT SUM(p5.Monto_usd)
+                 FROM pagos p5
+                 LEFT JOIN control_mensualidades cm5 ON cm5.idPago = p5.idPago
+                 WHERE p5.idEstudiante = ?
+                 AND (DATE_FORMAT(cm5.Mes_date, '%Y-%m') = ? 
+                      OR (cm5.Mes_date IS NULL AND DATE_FORMAT(p5.Fecha_pago, '%Y-%m') = ?))
+                ) AS Pago_Mes_Proximo
+             FROM pagos p
+             WHERE p.idEstudiante = ?`,
+            [
+                idEstudiante, // Ultimo_Mes
+                idEstudiante, lastMonth, lastMonth, // Mes pasado
+                idEstudiante, currentMonth, currentMonth, // Mes actual
+                idEstudiante, nextMonth, nextMonth, // Mes próximo
+                idEstudiante // WHERE principal
+            ]
+        );
+        
+        const result = rows[0] || { 
+            Ultimo_Pago: null, 
+            Total_Pagado_USD: 0, 
+            Cantidad_Pagos: 0, 
+            Ultimo_Mes: null,
+            Pago_Mes_Pasado: null,
+            Pago_Mes_Actual: null,
+            Pago_Mes_Proximo: null
+        };
+        
+        // Add month names for frontend display
+        result.Nombre_Mes_Pasado = lastMonth;
+        result.Nombre_Mes_Actual = currentMonth;
+        result.Nombre_Mes_Proximo = nextMonth;
+        
+        return result;
+    }
 }
 
 module.exports = { Estudiante };

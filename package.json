@@ -4,7 +4,8 @@
   "description": "Sistema de Cobro Electron",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "seed": "node scripts/seed_data.js"
   },
   "keywords": [
     "electron",

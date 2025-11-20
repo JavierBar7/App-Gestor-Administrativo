@@ -74,26 +74,41 @@ exports.createPayment = async (req, res) => {
         try {
             const mesRef = payload.Mes_referencia || payload.Mes || null;
             const idGrupoControl = payload.idGrupo || payload.idGrupo_control || null;
+            
+            console.log('Control Mensualidades - mesRef:', mesRef, 'idGrupo:', idGrupoControl);
+            
             if (mesRef) {
                 // Insert using STR_TO_DATE to accept 'YYYY-MM' from frontend (input[type=month])
                 // Note: control_mensualidades uses Mes_date column, not Mes
-                await conn.promise().query(
+                console.log('Inserting control_mensualidades with month:', mesRef);
+                const [result] = await conn.promise().query(
                     `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes_date, idGrupo)
                      VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
                     [idEstudiante, idPago, mesRef, idGrupoControl]
                 );
+                console.log('Control mensualidades inserted successfully, ID:', result.insertId);
             } else if (idGrupoControl) {
                 // If only group provided, insert with current month
                 const todayMonth = new Date().toISOString().slice(0,7); // 'YYYY-MM'
-                await conn.promise().query(
+                console.log('Inserting control_mensualidades with current month:', todayMonth);
+                const [result] = await conn.promise().query(
                     `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes_date, idGrupo)
                      VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
                     [idEstudiante, idPago, todayMonth, idGrupoControl]
                 );
+                console.log('Control mensualidades inserted successfully, ID:', result.insertId);
+            } else {
+                console.log('No month or group provided, skipping control_mensualidades insertion');
             }
         } catch (cmErr) {
             // Don't fail the payment if control insertion fails; log for debugging
-            console.warn('No se pudo insertar control_mensualidades:', cmErr && cmErr.message ? cmErr.message : cmErr);
+            console.error('ERROR inserting control_mensualidades:', cmErr);
+            console.error('Error details:', {
+                message: cmErr.message,
+                code: cmErr.code,
+                sqlMessage: cmErr.sqlMessage,
+                sql: cmErr.sql
+            });
         }
 
         // parciales: array of { monto, idDeuda? }

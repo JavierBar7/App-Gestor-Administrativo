@@ -132,11 +132,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             // pagos
                             const pagosTbody = document.querySelector('#det-pagos-table tbody');
                             pagosTbody.innerHTML = '';
+                            console.log('📊 Datos de pagos recibidos:', data.pagos);
                             if (Array.isArray(data.pagos) && data.pagos.length) {
                                 data.pagos.forEach(p => {
+                                    console.log('💰 Pago individual:', { Mes_control: p.Mes_control, Mes_referencia: p.Mes_referencia, Fecha_pago: p.Fecha_pago });
                                     const row = document.createElement('tr');
                                     const fecha = p.Fecha_pago ? (typeof p.Fecha_pago === 'string' && p.Fecha_pago.includes('T') ? p.Fecha_pago.split('T')[0] : new Date(p.Fecha_pago).toISOString().slice(0,10)) : '';
                                     const mes = formatMes(p.Mes_control || p.Mes_referencia || '', p.Fecha_pago);
+                                    console.log('📅 Mes formateado:', mes);
                                     const referencia = p.Referencia || '';
                                     const grupo = p.Grupo_nombre || '';
                                     const obs = p.Observacion || '';

@@ -71,14 +71,14 @@ const summaryGrupos = async (req, res) => {
     }
 };
 
-// List estudiantes of a group including last 3 payments
+// List estudiantes of a group including payment summary
 const estudiantesPorGrupo = async (req, res) => {
     try {
         const idGrupo = req.params.id;
         const { Estudiante } = require('../models/Estudiante');
         const estudiantes = await Estudiante.findEstudiantesByGrupo(idGrupo);
 
-        // for each estudiante, compute age and last 3 payments
+        // for each estudiante, compute age and payment summary
         const mapped = await Promise.all(estudiantes.map(async (e) => {
             const edad = (() => {
                 if (!e.Fecha_Nacimiento) return null;
@@ -89,8 +89,8 @@ const estudiantesPorGrupo = async (req, res) => {
                 if (m < 0 || (m === 0 && hoy.getDate() < fn.getDate())) edadCalc--;
                 return edadCalc;
             })();
-            const pagos = await Estudiante.getLastPaymentsForStudent(e.idEstudiante, 3);
-            return { ...e, edad, pagos };
+            const paymentSummary = await Estudiante.getPaymentSummary(e.idEstudiante);
+            return { ...e, edad, paymentSummary };
         }));
 
         return res.json(mapped);
