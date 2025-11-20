@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     btn.addEventListener('click', (ev) => {
                         ev.preventDefault();
                         const id = btn.getAttribute('data-id');
-                        openRegisterPaymentModal(id);
+                        window.location.href = `registrar_pago.html?studentId=${id}`;
                     });
                 });
 

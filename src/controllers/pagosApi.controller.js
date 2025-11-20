@@ -73,22 +73,22 @@ exports.createPayment = async (req, res) => {
         // If a month reference or group is provided, attempt to create a control_mensualidades record
         try {
             const mesRef = payload.Mes_referencia || payload.Mes || null;
-            const observacion = payload.Observacion || payload.Observacion_control || null;
             const idGrupoControl = payload.idGrupo || payload.idGrupo_control || null;
             if (mesRef) {
                 // Insert using STR_TO_DATE to accept 'YYYY-MM' from frontend (input[type=month])
+                // Note: control_mensualidades uses Mes_date column, not Mes
                 await conn.promise().query(
-                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Observacion, idGrupo)
-                     VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?, ?)`,
-                    [idEstudiante, idPago, mesRef, observacion, idGrupoControl]
+                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes_date, idGrupo)
+                     VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
+                    [idEstudiante, idPago, mesRef, idGrupoControl]
                 );
             } else if (idGrupoControl) {
                 // If only group provided, insert with current month
                 const todayMonth = new Date().toISOString().slice(0,7); // 'YYYY-MM'
                 await conn.promise().query(
-                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Observacion, idGrupo)
-                     VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?, ?)`,
-                    [idEstudiante, idPago, todayMonth, observacion, idGrupoControl]
+                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes_date, idGrupo)
+                     VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
+                    [idEstudiante, idPago, todayMonth, idGrupoControl]
                 );
             }
         } catch (cmErr) {
@@ -122,6 +122,11 @@ exports.createPayment = async (req, res) => {
         return res.json({ success: true, idPago, Monto_bs, Monto_usd, Tasa_Pago });
     } catch (err) {
         console.error('Error creating payment:', err);
-        return res.status(500).json({ success: false, message: 'Error creando pago' });
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Error creando pago: ' + (err.message || 'Unknown error'),
+            code: err.code,
+            sqlMessage: err.sqlMessage
+        });
     }
 };

@@ -90,22 +90,62 @@
     }
 
     static async createPago({ idDeuda = null, idMetodos_pago = null, idCuenta_Destino = null, idEstudiante = null, Referencia = null, Mes_referencia = null, Monto_bs = null, Tasa_Pago = null, Monto_usd = null, Fecha_pago = null }) {
-        // Try to insert including Mes_referencia if the column exists; fallback to legacy insert if not
-        try {
-            const [result] = await conn.promise().query(
-                'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Mes_referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Mes_referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
-            );
-            return result.insertId;
-        } catch (err) {
-            // If Mes_referencia column doesn't exist, fall back to original insert
-            if (err && err.code === 'ER_BAD_FIELD_ERROR') {
-                const [result] = await conn.promise().query(
-                    'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
-                );
+        
+        // Sanitize Mes_referencia if it's YYYY-MM to YYYY-MM-01 for DATE columns
+        let mesRefFinal = Mes_referencia;
+        if (mesRefFinal && /^\d{4}-\d{2}$/.test(mesRefFinal)) {
+            mesRefFinal += '-01';
+        }
+
+        // Helper to execute query and handle specific errors
+        const tryInsert = async (query, params) => {
+            try {
+                const [result] = await conn.promise().query(query, params);
                 return result.insertId;
+            } catch (err) {
+                throw err;
             }
+        };
+
+        // 1. Try Full Insert (with idDeuda and Mes_referencia)
+        try {
+            return await tryInsert(
+                'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Mes_referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, mesRefFinal, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
+            );
+        } catch (err) {
+            const code = err.code;
+            // console.error('Full insert failed:', code, err.message);
+
+            // 2. If Mes_referencia causes issues (Bad Field or Wrong Value/Date)
+            if (code === 'ER_BAD_FIELD_ERROR' || code === 'ER_TRUNCATED_WRONG_VALUE' || code === 'WARN_DATA_TRUNCATED') {
+                try {
+                    // Try without Mes_referencia but WITH idDeuda
+                    return await tryInsert(
+                        'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
+                    );
+                } catch (err2) {
+                    // 3. If idDeuda causes issues (Bad Field or FK Constraint)
+                    if (err2.code === 'ER_BAD_FIELD_ERROR' || err2.code === 'ER_NO_REFERENCED_ROW_2' || err2.code === 'ER_NO_REFERENCED_ROW') {
+                        return await tryInsert(
+                            'INSERT INTO pagos (idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                            [idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
+                        );
+                    }
+                    throw err2;
+                }
+            }
+            
+            // 4. If idDeuda causes issues (FK Constraint) directly on first try
+            if (code === 'ER_NO_REFERENCED_ROW_2' || code === 'ER_NO_REFERENCED_ROW') {
+                 // Try without idDeuda (but keep Mes_referencia if it wasn't the issue, or drop it to be safe? Let's drop it to be safest)
+                 return await tryInsert(
+                    'INSERT INTO pagos (idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
+                );
+            }
+
             throw err;
         }
     }
@@ -136,7 +176,7 @@
     static async getPaymentsByStudent(idEstudiante) {
         const [rows] = await conn.promise().query(
             `SELECT p.idPago, p.idDeuda, p.idMetodos_pago, p.Referencia, p.Monto_bs, p.Monto_usd, p.Fecha_pago,
-                    cm.Mes AS Mes_control, cm.Observacion, cm.idGrupo AS idGrupo_control, g.Nombre_Grupo AS Grupo_nombre
+                    cm.Mes_date AS Mes_control, cm.idGrupo AS idGrupo_control, g.Nombre_Grupo AS Grupo_nombre
              FROM pagos p
              LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago AND cm.idEstudiante = p.idEstudiante
              LEFT JOIN grupos g ON g.idGrupo = cm.idGrupo
@@ -167,6 +207,19 @@
              LEFT JOIN cursos c ON c.idCurso = g.idCurso
              WHERE i.idEstudiante = ?
              ORDER BY i.Fecha_inscripcion DESC`, [idEstudiante]
+        );
+        return rows;
+    }
+
+    static async getDeudasByStudent(idEstudiante) {
+        const [rows] = await conn.promise().query(
+            `SELECT d.*, 
+                    (COALESCE((SELECT SUM(p.Monto_usd) FROM pagos p WHERE p.idDeuda = d.idDeuda), 0) + 
+                     COALESCE((SELECT SUM(pp.Monto_parcial) FROM pagos_parciales pp WHERE pp.idDeuda = d.idDeuda), 0)) AS Total_Pagado
+             FROM deudas d
+             WHERE d.idEstudiante = ? AND d.Estado != 'Pagada'
+             ORDER BY d.Fecha_emision ASC`, 
+            [idEstudiante]
         );
         return rows;
     }

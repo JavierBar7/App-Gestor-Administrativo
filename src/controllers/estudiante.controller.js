@@ -217,3 +217,14 @@ exports.createEstudiante = async (req, res) => {
         return res.status(500).json(resp);
     }
 };
+
+exports.getDeudas = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const deudas = await Estudiante.getDeudasByStudent(id);
+        return res.json({ success: true, deudas });
+    } catch (error) {
+        console.error('Error obteniendo deudas:', error);
+        return res.status(500).json({ success: false, message: 'Error al obtener deudas' });
+    }
+};
