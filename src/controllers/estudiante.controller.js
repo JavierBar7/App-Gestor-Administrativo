@@ -99,7 +99,7 @@ exports.createEstudiante = async (req, res) => {
             const invalidGroups = [];
             for (const gid of payload.grupos) {
                 try {
-                    const { Grupo } = require('../models/Grupo'); // Importar aquí para evitar circular si fuera necesario
+                    const { Grupo } = require('../models/Grupo');
                     const grupo = await Grupo.findById(gid);
                     if (!grupo) {
                         invalidGroups.push(gid);
@@ -144,7 +144,7 @@ exports.createEstudiante = async (req, res) => {
                     return res.status(400).json({ success: false, message: 'Faltan datos del pago: monto o método.' });
                 }
 
-                // --- LÓGICA DE CUENTA DESTINO ---
+                // --- LÓGICA DE CUENTA DESTINO AUTOMÁTICA ---
                 let idCuentaAuto = 1; 
                 if (metodoId === 1 || metodoId === 2) {
                     idCuentaAuto = 2;
@@ -182,9 +182,9 @@ exports.createEstudiante = async (req, res) => {
                 const idPago = await Estudiante.createPago({
                     idDeuda: pago.idDeuda || null,
                     idMetodos_pago: metodoId,
-                    idCuenta_Destino: idCuentaFinal, // <--- Aplicada aquí
+                    idCuenta_Destino: idCuentaFinal, // <--- CAMBIO: Usamos la cuenta calculada
                     idEstudiante,
-                    Referencia: pago.referencia || pago.Referencia || 'Pendiente',
+                    Referencia: pago.referencia || pago.Referencia || 'Pendiente', // <--- CAMBIO: Evitamos NULL
                     Mes_referencia: pago.Mes_referencia || pago.Mes || null,
                     Monto_bs,
                     Tasa_Pago,

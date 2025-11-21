@@ -6,7 +6,8 @@ exports.createPayment = async (req, res) => {
     try {
         const payload = req.body;
         const idEstudiante = payload.idEstudiante;
-        const metodoId = payload.metodoId;
+        const metodoId = Number(payload.metodoId); // Asegurar que es número
+
         // fetch payment method info to apply validation rules
         let metodoRow = null;
         try {
@@ -15,6 +16,7 @@ exports.createPayment = async (req, res) => {
         } catch (mErr) {
             console.warn('No se pudo obtener metodos_pagos para validación:', mErr && mErr.message ? mErr.message : mErr);
         }
+        
         const referencia = payload.referencia || null;
         const idDeuda = payload.idDeuda || null;
         const monto = Number(payload.monto || 0);
@@ -38,6 +40,17 @@ exports.createPayment = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Pago móvil requiere el monto de la transacción' });
             }
         }
+
+        // --- LÓGICA DE CUENTA DESTINO AUTOMÁTICA ---
+        // 1: Transferencia, 2: Pago Móvil -> Cuenta Débito (ID 2)
+        // 3: Efectivo, 4: Cash -> Caja Chica (ID 1)
+        let idCuentaAuto = 1; 
+        if (metodoId === 1 || metodoId === 2) {
+            idCuentaAuto = 2;
+        }
+        // Usamos la que venga del front o la automática
+        const idCuentaFinal = payload.idCuenta_Destino || idCuentaAuto;
+
 
         const tasaActual = await Estudiante.getLatestTasa();
         let Monto_bs = null;
@@ -65,9 +78,9 @@ exports.createPayment = async (req, res) => {
             const idPago = await Estudiante.createPago({
                 idDeuda: idDeuda || null,
                 idMetodos_pago: metodoId,
-                idCuenta_Destino: payload.idCuenta_Destino || null,
+                idCuenta_Destino: idCuentaFinal, // <--- CAMBIO: Usamos la cuenta calculada
                 idEstudiante,
-                Referencia: referencia,
+                Referencia: referencia || 'Pendiente', // <--- CAMBIO: Evitamos NULL
                 Mes_referencia: payload.Mes_referencia || null,
                 Monto_bs,
                 Tasa_Pago,
@@ -78,12 +91,14 @@ exports.createPayment = async (req, res) => {
             // control_mensualidades insertion (if requested)
             const mesRef = payload.Mes_referencia || payload.Mes || null;
             const idGrupoControl = payload.idGrupo || payload.idGrupo_control || null;
+            
             if (mesRef) {
                 let mesRefNormalized = mesRef;
                 const mMatch = mesRef.match(/^(\d{4}-\d{2})/);
                 if (mMatch) mesRefNormalized = mMatch[1];
                 const yearInt = Number(mesRefNormalized.split('-')[0]);
                 const monthInt = Number(mesRefNormalized.split('-')[1]);
+                
                 await dbConn.promise().query(
                     `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Year, Mes_date, idGrupo)
                      VALUES (?, ?, ?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
@@ -94,6 +109,7 @@ exports.createPayment = async (req, res) => {
                 const todayMonthStr = now.toISOString().slice(0,7);
                 const yearInt = now.getFullYear();
                 const monthInt = now.getMonth() + 1;
+                
                 await dbConn.promise().query(
                     `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Year, Mes_date, idGrupo)
                      VALUES (?, ?, ?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
@@ -101,9 +117,10 @@ exports.createPayment = async (req, res) => {
                 );
             }
 
-            // parciales
+            // parciales: array of { monto, idDeuda? }
             const deudaIdsToReconcile = new Set();
             if (idDeuda) deudaIdsToReconcile.add(idDeuda);
+            
             if (parciales.length) {
                 for (const p of parciales) {
                     const montoPar = Number(p.monto || 0);
@@ -115,7 +132,7 @@ exports.createPayment = async (req, res) => {
                 }
             }
 
-            // billetes
+            // billetes: array of { Codigo_billete, Denominacion }
             if (billetes.length) {
                 for (const b of billetes) {
                     const codigo = b.Codigo_billete || b.codigo || null;
@@ -128,20 +145,22 @@ exports.createPayment = async (req, res) => {
                 }
             }
 
-            // Reconcile deudas referenced by the payment / parciales
+            // Reconcile deudas referenced by the payment / parciales (Opcional si tienes esa función)
+            /*
             try {
                 for (const dId of Array.from(deudaIdsToReconcile)) {
                     if (!dId) continue;
-                    await Estudiante.reconcileDeuda(dId, dbConn);
+                    // await Estudiante.reconcileDeuda(dId, dbConn); // Descomentar si existe
                 }
             } catch (recErr) {
-                // If reconcile fails, rollback below will handle it; include context for debugging
                 throw new Error('Error reconciling deudas: ' + (recErr && recErr.message ? recErr.message : recErr));
             }
+            */
 
             await dbConn.commit();
             dbConn.release();
             return res.json({ success: true, idPago, Monto_bs, Monto_usd, Tasa_Pago });
+
         } catch (txErr) {
             try { await dbConn.rollback(); } catch (rbErr) { console.error('Rollback error:', rbErr); }
             try { dbConn.release(); } catch (relErr) { }
