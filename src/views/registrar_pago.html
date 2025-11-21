@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../../public/gestion.css" />
     <link rel="stylesheet" href="../../public/estudiantes.css" />
     <style>
-      /* Specific styles for this page to match the requested design */
+      /* Estilos específicos para la vista de pagos */
       .payment-container {
         max-width: 900px;
         margin: 20px auto;
@@ -183,62 +183,56 @@
             </div>
           </div>
 
-          <div class="input-group">
-            <label>Mes al que refiere el pago</label>
-            <input type="month" id="pay-mes-global" />
-          </div>
-
-          <div class="input-group">
-            <label>Observación (Opcional)</label>
-            <textarea id="pay-observacion" rows="2" placeholder="Notas adicionales sobre el pago..."></textarea>
-          </div>
-
-
-          <!-- Payment Type Radios -->
-          <div class="input-group" style="margin-bottom: 15px;">
-            <label>Tipo de Pago</label>
-            <div style="display: flex; gap: 20px; align-items: center;">
-                <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
-                    <input type="radio" name="payment-type" value="full" checked> Pago Completo / Abono Libre
+          <div class="input-group" style="margin-bottom: 15px; background: #e3f2fd; padding: 15px; border-radius: 8px;">
+            <label style="color: #1565c0; font-weight: bold; font-size: 1.1em;">1. Seleccione el Tipo de Pago</label>
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
+                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <input type="radio" name="payment-type" value="mensualidad" checked> Pago de Mensualidad
                 </label>
-                <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
-                    <input type="radio" name="payment-type" value="partial"> Pago Parcial (Deuda)
+                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <input type="radio" name="payment-type" value="deuda"> Pago de Deuda Existente
+                </label>
+                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <input type="radio" name="payment-type" value="abono"> Abono / Otros
                 </label>
             </div>
           </div>
 
-          <!-- Partial Payment Section -->
-          <div id="partial-payment-section" style="display:none; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dee2e6;">
-              <div class="input-group">
-                  <label>Seleccionar Deuda Existente (Opcional)</label>
-                  <select id="pay-deuda-select" style="width:100%; padding:8px;">
-                      <option value="">-- Nueva / Otra --</option>
-                  </select>
-              </div>
-              
-              <div class="split-payment-row">
-                  <div class="input-group">
-                      <label>Monto Total de la Deuda ($)</label>
-                      <input type="number" id="total-debt-amount" step="0.01" placeholder="0.00">
-                  </div>
-                  <div class="input-group">
-                      <label>Restante por Pagar ($)</label>
-                      <input type="text" id="debt-remaining-display" readonly style="background: #e9ecef; font-weight: bold;">
-                  </div>
-              </div>
-          </div>
+          <div id="dynamic-payment-options" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+            
+            <div id="opt-mensualidad">
+                <label style="font-weight: 600;">Seleccione el Mes a Pagar:</label>
+                <input type="month" id="pay-mes-selector" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                <p style="font-size: 0.85em; color: #666; margin-top: 8px;">
+                    <span style="color: #28a745;">ℹ️</span> Esto registrará el mes seleccionado como <strong>solvente</strong> en el historial del estudiante.
+                </p>
+            </div>
 
+            <div id="opt-deuda" style="display: none;">
+                <label style="font-weight: 600;">Seleccione la Deuda Pendiente:</label>
+                <select id="pay-deuda-select" style="width:100%; padding:10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="">-- Cargando deudas... --</option>
+                </select>
+                <div style="display: flex; justify-content: space-between; margin-top: 15px; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #eee;">
+                    <span>Total Deuda: <strong id="deuda-info-total">$0.00</strong></span>
+                    <span>Restante: <strong id="deuda-info-restante" style="color: #dc3545;">$0.00</strong></span>
+                </div>
+            </div>
+
+            <div id="opt-abono" style="display: none;">
+                <label style="font-weight: 600;">Concepto del Abono:</label>
+                <input type="text" id="pay-concepto-abono" placeholder="Ej: Adelanto Mensualidad Diciembre, Compra de Libro, etc." style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+          </div>
           <h3>Métodos de Pago</h3>
           <p style="font-size: 0.9em; color: #666; margin-bottom: 10px">
             Seleccione uno o más métodos para pagos fraccionados.
           </p>
           <div class="payment-methods-tabs" id="methods-container">
-            <!-- Tabs injected by JS -->
-          </div>
+            </div>
 
           <div id="active-methods-forms">
-            <!-- Dynamic forms for each selected method -->
-          </div>
+            </div>
 
           <div class="total-display">
             <h3>PRECIO TOTAL</h3>
@@ -253,15 +247,14 @@
           </div>
 
           <div class="input-group">
-            <label>Observaciones (Opcional)</label>
+            <label>Observaciones Adicionales (Opcional)</label>
             <textarea
               id="pay-observacion"
               rows="2"
               style="width: 100%"
+              placeholder="Cualquier detalle extra sobre la transacción..."
             ></textarea>
           </div>
-
-
 
           <div class="action-buttons">
             <button type="button" class="btn-cancel" id="cancel-btn">

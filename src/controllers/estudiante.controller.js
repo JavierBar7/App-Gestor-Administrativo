@@ -190,17 +190,88 @@ exports.createEstudiante = async (req, res) => {
     }
 };
 
+// src/controllers/estudiante.controller.js
+
 exports.getDeudas = async (req, res) => {
     try {
         const id = req.params.id;
-        const deudas = await Estudiante.getDeudasByStudent(id);
-        return res.json({ success: true, deudas });
+        const conn = require('../../config/database'); // Asegúrate de importar la conexión si no está arriba
+
+        // 1. Obtener datos del estudiante (Inscripción)
+        const [est] = await conn.promise().query(
+            'SELECT Fecha_inscripcion FROM inscripciones WHERE idEstudiante = ? ORDER BY Fecha_inscripcion ASC LIMIT 1',
+            [id]
+        );
+
+        // 2. Obtener deudas registradas en BD (las manuales o antiguas)
+        const deudasRegistradas = await require('../models/Estudiante').Estudiante.getDeudasByStudent(id);
+
+        // 3. Calcular meses pendientes automáticamente
+        let deudasVirtuales = [];
+        if (est && est.length > 0) {
+            const fechaInicio = new Date(est[0].Fecha_inscripcion);
+            const fechaActual = new Date();
+            const costoMensualidad = 30.00; // MONTO FIJO $30
+
+            // Iterar mes a mes desde la inscripción hasta la fecha actual
+            let iterador = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1);
+            
+            while (iterador <= fechaActual) {
+                // Formato YYYY-MM para comparar
+                const mesCheck = iterador.getMonth() + 1;
+                const yearCheck = iterador.getFullYear();
+                const mesStr = `${yearCheck}-${String(mesCheck).padStart(2, '0')}`;
+
+                // a. Verificar si ya está pagado en control_mensualidades
+                const [pagado] = await conn.promise().query(
+                    `SELECT idControl FROM control_mensualidades 
+                     WHERE idEstudiante = ? AND (
+                        (Mes = ? AND Year = ?) OR DATE_FORMAT(Mes_date, '%Y-%m') = ?
+                     )`,
+                    [id, mesCheck, yearCheck, mesStr]
+                );
+
+                // b. Verificar si ya existe como deuda física en la tabla 'deudas' para no duplicar visualmente
+                // (Asumimos que el concepto contiene el nombre del mes o algo identificable, pero por seguridad
+                // si ya hay una deuda pendiente generada, no mostramos la virtual).
+                const deudaFisicaExiste = deudasRegistradas.find(d => 
+                    d.Concepto.toLowerCase().includes(iterador.toLocaleString('es-ES', { month: 'long' })) && 
+                    d.Concepto.toLowerCase().includes(String(yearCheck))
+                );
+
+                // Si NO está pagado y NO tiene deuda física ya registrada -> Generar Deuda Virtual
+                if ((!pagado || pagado.length === 0) && !deudaFisicaExiste) {
+                    const nombreMes = iterador.toLocaleString('es-ES', { month: 'long' });
+                    const mesCapitalizado = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
+                    
+                    deudasVirtuales.push({
+                        idDeuda: `virtual_${mesStr}`, // ID temporal para el frontend
+                        Concepto: `Mensualidad ${mesCapitalizado} ${yearCheck}`,
+                        Monto_usd: costoMensualidad.toFixed(4),
+                        Total_Pagado: 0,
+                        Fecha_emision: new Date(iterador), // Fecha del mes que debe
+                        Estado: 'Pendiente (Automática)',
+                        esVirtual: true, // Flag para saber que no está en BD aun
+                        mesRef: mesStr // Para enviar al pagar
+                    });
+                }
+
+                // Avanzar al siguiente mes
+                iterador.setMonth(iterador.getMonth() + 1);
+            }
+        }
+
+        // Fusionar Deudas Reales (BD) + Deudas Virtuales (Calculadas)
+        const todasLasDeudas = [...deudasRegistradas, ...deudasVirtuales];
+
+        return res.json({ success: true, deudas: todasLasDeudas });
+
     } catch (error) {
         console.error('Error obteniendo deudas:', error);
         return res.status(500).json({ success: false, message: 'Error al obtener deudas' });
     }
 };
-
+//------------------------------------
 exports.getListadoDeudores = async (req, res) => {
     try {
         const deudores = await Estudiante.getDeudores();

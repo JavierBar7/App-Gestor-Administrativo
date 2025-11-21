@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 fecha = s.Fecha_Nacimiento.split('T')[0];
                             } else {
                                 try {
-                                    fecha = new Date(s.Fecha_Nacimiento).toISOString().slice(0,10);
+                                    fecha = new Date(s.Fecha_Nacimiento).toISOString().slice(0, 10);
                                 } catch (e) {
                                     fecha = '';
                                 }
@@ -88,23 +88,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const monto = p.Monto_usd ? `${p.Monto_usd}` : (p.Monto_bs ? `Bs.${p.Monto_bs}` : '');
                             const ref = p.Referencia ? `Ref: ${p.Referencia}` : '';
                             const mes = p.Mes_Pagado ? `Mes: ${formatMes(p.Mes_Pagado)}` : '';
-                            
+
                             // Combine parts
                             let details = [];
                             if (ref) details.push(ref);
                             if (mes) details.push(mes);
                             const detailStr = details.length ? `(${details.join(' - ')})` : '';
-                            
+
                             lastPayDisplay = `<strong>${metodo}:</strong> ${monto} <small>${detailStr}</small>`;
                         }
 
                         // Pending Debt Display - Handles per-group monthly payment status
                         let debtDisplay = '<span style="color:red; font-weight:bold;">Deuda</span>';
-                        
+
                         // Check if solvente (pendingDebt === 0)
                         if (s.pendingDebt === 0 || s.pendingDebt === '0') {
                             debtDisplay = '<span style="color:green;">Solvente</span>';
-                        } 
+                        }
                         // Check if it's a numeric debt amount
                         else if (s.pendingDebt && !isNaN(Number(s.pendingDebt)) && Number(s.pendingDebt) > 0) {
                             debtDisplay = `<span style="color:red; font-weight:bold;">${Number(s.pendingDebt).toFixed(2)}</span>`;
@@ -138,16 +138,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 alert('No se pudieron obtener los detalles del estudiante');
                                 return;
                             }
-                            // fill modal
+                            
+                            // --- LLENADO DEL MODAL DE DETALLES ---
                             const est = data.estudiante;
                             document.getElementById('det-nombre').textContent = `${est.Nombres} ${est.Apellidos}`;
-                            document.getElementById('det-cedula').textContent = `Cédula: ${est.Cedula || ''}`;
-                            document.getElementById('det-fecha-nac').textContent = `Fecha de Nacimiento: ${est.Fecha_Nacimiento ? (typeof est.Fecha_Nacimiento === 'string' && est.Fecha_Nacimiento.includes('T') ? est.Fecha_Nacimiento.split('T')[0] : new Date(est.Fecha_Nacimiento).toISOString().slice(0,10)) : ''}`;
-                            document.getElementById('det-telefono').textContent = `Teléfono: ${est.Telefono || ''}`;
-                            document.getElementById('det-correo').textContent = `Correo: ${est.Correo || ''}`;
-                            document.getElementById('det-direccion').textContent = `Dirección: ${est.Direccion || ''}`;
+                            
+                            // CORRECCIÓN: Eliminamos los prefijos repetidos
+                            document.getElementById('det-cedula').textContent = est.Cedula || '';
+                            document.getElementById('det-fecha-nac').textContent = est.Fecha_Nacimiento ? (typeof est.Fecha_Nacimiento === 'string' && est.Fecha_Nacimiento.includes('T') ? est.Fecha_Nacimiento.split('T')[0] : new Date(est.Fecha_Nacimiento).toISOString().slice(0, 10)) : '';
+                            document.getElementById('det-telefono').textContent = est.Telefono || '';
+                            document.getElementById('det-correo').textContent = est.Correo || '';
+                            document.getElementById('det-direccion').textContent = est.Direccion || '';
 
-                            // representante
+                            // Representante
                             const repEl = document.getElementById('det-representante');
                             if (data.representante) {
                                 const r = data.representante;
@@ -156,27 +159,47 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 repEl.textContent = 'No posee representante registrado.';
                             }
 
-                            // pagos
+                            // TABLA DE PAGOS CORREGIDA
                             const pagosTbody = document.querySelector('#det-pagos-table tbody');
                             pagosTbody.innerHTML = '';
-                            console.log('📊 Datos de pagos recibidos:', data.pagos);
+                            
                             if (Array.isArray(data.pagos) && data.pagos.length) {
                                 data.pagos.forEach(p => {
-                                    console.log('💰 Pago individual:', { Mes_control: p.Mes_control, Mes_referencia: p.Mes_referencia, Fecha_pago: p.Fecha_pago });
                                     const row = document.createElement('tr');
-                                    const fecha = p.Fecha_pago ? (typeof p.Fecha_pago === 'string' && p.Fecha_pago.includes('T') ? p.Fecha_pago.split('T')[0] : new Date(p.Fecha_pago).toISOString().slice(0,10)) : '';
-                                    const mes = formatMes(p.Mes_control || p.Mes_referencia || '', p.Fecha_pago);
-                                    console.log('📅 Mes formateado:', mes);
-                                    const referencia = p.Referencia || '';
-                                    const grupo = p.Grupo_nombre || '';
+                                    
+                                    // Fecha
+                                    const fechaObj = p.Fecha_pago ? new Date(p.Fecha_pago) : null;
+                                    const fecha = fechaObj ? fechaObj.toISOString().slice(0, 10) : '';
+                                    
+                                    // Mes: Si no hay referencia, mostrar el mes de la fecha del pago
+                                    let mes = '';
+                                    if (p.Mes_control || p.Mes_referencia) {
+                                         mes = formatMes(p.Mes_control || p.Mes_referencia, p.Fecha_pago);
+                                    } else if (fechaObj) {
+                                         mes = fechaObj.toLocaleString('es-ES', { month: 'long' });
+                                         mes = mes.charAt(0).toUpperCase() + mes.slice(1);
+                                    }
+
+                                    const referencia = p.Referencia || 'N/A';
+                                    // Eliminamos variable grupo
                                     const obs = p.Observacion || '';
                                     const montoBs = p.Monto_bs != null ? p.Monto_bs : '';
                                     const montoUsd = p.Monto_usd != null ? p.Monto_usd : '';
-                                    row.innerHTML = `<td>${fecha}</td><td>${mes}</td><td>${referencia}</td><td>${grupo}</td><td>${obs}</td><td>${montoBs}</td><td>${montoUsd}</td>`;
+                                    
+                                    // Quitamos la celda de Grupo
+                                    row.innerHTML = `
+                                        <td>${fecha}</td>
+                                        <td>${mes}</td>
+                                        <td>${referencia}</td>
+                                        <td>${obs}</td>
+                                        <td>${montoBs}</td>
+                                        <td>${montoUsd}</td>
+                                    `;
                                     pagosTbody.appendChild(row);
                                 });
                             } else {
-                                pagosTbody.innerHTML = '<tr><td colspan="7">No hay pagos registrados.</td></tr>';
+                                // Ajustamos colspan a 6 columnas
+                                pagosTbody.innerHTML = '<tr><td colspan="6">No hay pagos registrados.</td></tr>';
                             }
 
                             // grupos
@@ -185,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (Array.isArray(data.grupos) && data.grupos.length) {
                                 data.grupos.forEach(g => {
                                     const row = document.createElement('tr');
-                                    const fecha = g.Fecha_inscripcion ? (typeof g.Fecha_inscripcion === 'string' && g.Fecha_inscripcion.includes('T') ? g.Fecha_inscripcion.split('T')[0] : new Date(g.Fecha_inscripcion).toISOString().slice(0,10)) : '';
+                                    const fecha = g.Fecha_inscripcion ? (typeof g.Fecha_inscripcion === 'string' && g.Fecha_inscripcion.includes('T') ? g.Fecha_inscripcion.split('T')[0] : new Date(g.Fecha_inscripcion).toISOString().slice(0, 10)) : '';
                                     row.innerHTML = `<td>${fecha}</td><td>${g.Nombre_Grupo || ''}</td><td>${g.Nombre_Curso || ''}</td>`;
                                     gruposTbody.appendChild(row);
                                 });
@@ -193,34 +216,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 gruposTbody.innerHTML = '<tr><td colspan="3">No hay historial de grupos.</td></tr>';
                             }
 
-                                // deudas (pendientes)
-                                const deudasTbody = document.querySelector('#det-deudas-table tbody');
-                                deudasTbody.innerHTML = '';
-                                try {
-                                    const deudas = Array.isArray(data.deudas) ? data.deudas : [];
-                                    if (deudas.length === 0) {
-                                        // show small clarifying text when no pending debts
-                                        deudasTbody.innerHTML = '<tr><td colspan="5" style="padding:8px;color:#555;">No posee deudas pendientes.</td></tr>';
-                                    } else {
-                                        deudas.forEach(d => {
-                                            const row = document.createElement('tr');
-                                            const fechaEm = d.Fecha_emision ? (typeof d.Fecha_emision === 'string' && d.Fecha_emision.includes('T') ? d.Fecha_emision.split('T')[0] : new Date(d.Fecha_emision).toISOString().slice(0,10)) : '';
-                                            const fechaVenc = d.Fecha_vencimiento ? (typeof d.Fecha_vencimiento === 'string' && d.Fecha_vencimiento.includes('T') ? d.Fecha_vencimiento.split('T')[0] : new Date(d.Fecha_vencimiento).toISOString().slice(0,10)) : '';
-                                            const totalPagado = (d.Total_Pagado != null) ? Number(d.Total_Pagado) : 0;
-                                            const montoUsd = d.Monto_usd != null ? Number(d.Monto_usd) : 0;
-                                            const pendiente = (montoUsd - totalPagado) || 0;
-                                            row.innerHTML = `<td>${d.Concepto || ''}</td><td>${montoUsd != null ? montoUsd.toFixed(4) : ''}</td><td>${fechaEm}</td><td>${fechaVenc}</td><td>${d.Estado || ''}${pendiente > 0 ? ' — Pendiente: $' + pendiente.toFixed(4) : ''}</td>`;
-                                            deudasTbody.appendChild(row);
-                                        });
-                                    }
-                                } catch (deErr) {
-                                    console.error('Error renderizando deudas:', deErr);
-                                    deudasTbody.innerHTML = '<tr><td colspan="5">Error mostrando deudas (ver consola).</td></tr>';
+                            // deudas (pendientes)
+                            const deudasTbody = document.querySelector('#det-deudas-table tbody');
+                            deudasTbody.innerHTML = '';
+                            try {
+                                const deudas = Array.isArray(data.deudas) ? data.deudas : [];
+                                if (deudas.length === 0) {
+                                    deudasTbody.innerHTML = '<tr><td colspan="5" style="padding:8px;color:#555;">No posee deudas pendientes.</td></tr>';
+                                } else {
+                                    deudas.forEach(d => {
+                                        const row = document.createElement('tr');
+                                        const fechaEm = d.Fecha_emision ? (typeof d.Fecha_emision === 'string' && d.Fecha_emision.includes('T') ? d.Fecha_emision.split('T')[0] : new Date(d.Fecha_emision).toISOString().slice(0, 10)) : '';
+                                        const fechaVenc = d.Fecha_vencimiento ? (typeof d.Fecha_vencimiento === 'string' && d.Fecha_vencimiento.includes('T') ? d.Fecha_vencimiento.split('T')[0] : new Date(d.Fecha_vencimiento).toISOString().slice(0, 10)) : '';
+                                        const totalPagado = (d.Total_Pagado != null) ? Number(d.Total_Pagado) : 0;
+                                        const montoUsd = d.Monto_usd != null ? Number(d.Monto_usd) : 0;
+                                        const pendiente = (montoUsd - totalPagado) || 0;
+                                        row.innerHTML = `<td>${d.Concepto || ''}</td><td>${montoUsd != null ? montoUsd.toFixed(4) : ''}</td><td>${fechaEm}</td><td>${fechaVenc}</td><td>${d.Estado || ''}${pendiente > 0 ? ' — Pendiente: $' + pendiente.toFixed(4) : ''}</td>`;
+                                        deudasTbody.appendChild(row);
+                                    });
                                 }
+                            } catch (deErr) {
+                                console.error('Error renderizando deudas:', deErr);
+                                deudasTbody.innerHTML = '<tr><td colspan="5">Error mostrando deudas (ver consola).</td></tr>';
+                            }
 
                             // show modal
                             document.getElementById('student-details-modal').style.display = 'flex';
-                            // Actions are provided in the table's actions column; no injection needed here.
                         } catch (err) {
                             console.error('Error cargando detalles:', err);
                             alert('Error cargando detalles del estudiante');
@@ -252,7 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.getElementById('est-Nombres').value = student.Nombres || '';
                         document.getElementById('est-Apellidos').value = student.Apellidos || '';
                         document.getElementById('est-Cedula').value = student.Cedula || '';
-                        document.getElementById('est-Fecha_Nacimiento').value = student.Fecha_Nacimiento ? (typeof student.Fecha_Nacimiento === 'string' && student.Fecha_Nacimiento.includes('T') ? student.Fecha_Nacimiento.split('T')[0] : new Date(student.Fecha_Nacimiento).toISOString().slice(0,10)) : '';
+                        document.getElementById('est-Fecha_Nacimiento').value = student.Fecha_Nacimiento ? (typeof student.Fecha_Nacimiento === 'string' && student.Fecha_Nacimiento.includes('T') ? student.Fecha_Nacimiento.split('T')[0] : new Date(student.Fecha_Nacimiento).toISOString().slice(0, 10)) : '';
                         document.getElementById('est-Telefono').value = student.Telefono || '';
                         document.getElementById('est-Correo').value = student.Correo || '';
                         document.getElementById('est-Direccion').value = student.Direccion || '';
@@ -516,7 +537,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             body.innerHTML = '';
             data.historial.forEach(h => {
                 const tr = document.createElement('tr');
-                const fecha = h.Fecha_Registro ? (typeof h.Fecha_Registro === 'string' && h.Fecha_Registro.includes('T') ? h.Fecha_Registro.split('T')[0] : new Date(h.Fecha_Registro).toISOString().slice(0,10)) : '';
+                const fecha = h.Fecha_Registro ? (typeof h.Fecha_Registro === 'string' && h.Fecha_Registro.includes('T') ? h.Fecha_Registro.split('T')[0] : new Date(h.Fecha_Registro).toISOString().slice(0, 10)) : '';
                 tr.innerHTML = `<td style="padding:6px">${fecha}</td><td style="padding:6px;text-align:right">${h.Tasa_Registrada != null ? Number(h.Tasa_Registrada).toFixed(4) : ''}</td>`;
                 body.appendChild(tr);
             });
@@ -664,7 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // YYYYMM
         const reYm = /^\d{6}$/;
         if (reYm.test(s)) {
-            const y = s.slice(0,4); const m = s.slice(4,6);
+            const y = s.slice(0, 4); const m = s.slice(4, 6);
             return `${m}/${y}`;
         }
         // pure year YYYY
@@ -674,7 +695,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const num = Number(s);
         if (!isNaN(num) && num >= 1 && num <= 12) {
             let year = (fechaPago ? new Date(fechaPago).getFullYear() : null) || new Date().getFullYear();
-            return `${String(num).padStart(2,'0')}/${year}`;
+            return `${String(num).padStart(2, '0')}/${year}`;
         }
         return s;
     }
@@ -783,14 +804,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (addStudentBtn) {
         addStudentBtn.addEventListener('click', () => {
-            // prepare modal for new student
+            // Prepare modal for new student
             addStudentForm.removeAttribute('data-edit-id');
             addStudentForm.reset();
-            // set inscripción date default to today
+
+            // --- CAMBIO: Asegurar que la fecha de inscripción tenga el día de hoy ---
             const fechaInsInput = document.getElementById('ins-Fecha_inscripcion');
-            if (fechaInsInput) fechaInsInput.value = new Date().toISOString().slice(0,10);
+            if (fechaInsInput) {
+                fechaInsInput.value = new Date().toISOString().slice(0, 10);
+            }
+            // ------------------------------------------------------------------------
+
             document.getElementById('student-modal-title').textContent = 'Agregar Estudiante';
             addStudentModal.style.display = 'flex';
+
+            // Limpiar mensajes de error anteriores
+            const errEl = document.getElementById('add-student-error');
+            if (errEl) errEl.classList.remove('visible');
         });
     }
     if (closeAddStudentBtn) {
@@ -824,15 +854,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (addStudentForm) {
         addStudentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            document.getElementById('add-student-error').classList.remove('visible');
-            // collect selected grupos from autocomplete. If none, fall back to select value
+            console.log("⏳ Iniciando proceso de guardado...");
+
+            // 1. Limpiar errores previos
+            const errorMsg = document.getElementById('add-student-error');
+            if (errorMsg) {
+                errorMsg.textContent = '';
+                errorMsg.classList.remove('visible');
+            }
+
+            // 2. Validación manual rápida (para evitar bloqueos silenciosos)
+            const campoNombre = document.getElementById('est-Nombres');
+            const campoCedula = document.getElementById('est-Cedula');
+            const campoFecha = document.getElementById('ins-Fecha_inscripcion');
+
+            if (!campoNombre.value || !campoCedula.value) {
+                alert("⚠️ Faltan campos obligatorios: Nombre o Cédula.");
+                return;
+            }
+
+            // 3. Asegurar fecha de inscripción
+            let fechaInscripcion = null;
+            if (campoFecha) {
+                fechaInscripcion = campoFecha.value;
+                // Si está vacía, forzamos la fecha de hoy
+                if (!fechaInscripcion) {
+                    fechaInscripcion = new Date().toISOString().slice(0, 10);
+                }
+            }
+
+            // 4. Recopilar grupos seleccionados
             let gruposToSend = [];
-            if (selectedGrupos && selectedGrupos.length) {
+            if (typeof selectedGrupos !== 'undefined' && selectedGrupos.length > 0) {
                 gruposToSend = selectedGrupos.slice();
             } else {
-                const selectedGrupoId = document.getElementById('ins-idGrupo') ? document.getElementById('ins-idGrupo').value : null;
-                if (selectedGrupoId) gruposToSend = [selectedGrupoId];
+                const selectGrupo = document.getElementById('ins-idGrupo');
+                if (selectGrupo && selectGrupo.value) {
+                    gruposToSend = [selectGrupo.value];
+                }
             }
+
+            // 5. Construir el objeto a enviar
             const payload = {
                 Nombres: document.getElementById('est-Nombres').value,
                 Apellidos: document.getElementById('est-Apellidos').value,
@@ -841,49 +903,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Telefono: document.getElementById('est-Telefono').value,
                 Correo: document.getElementById('est-Correo').value,
                 Direccion: document.getElementById('est-Direccion').value,
-                // Enviar array `grupos` (ids) para inscribir en uno o varios grupos; también incluimos fecha de inscripción
                 grupos: gruposToSend,
-                Fecha_inscripcion: document.getElementById('ins-Fecha_inscripcion') ? document.getElementById('ins-Fecha_inscripcion').value : null
+                Fecha_inscripcion: fechaInscripcion
             };
 
-            // Adjuntar info de pago si el usuario completó monto
-            const payMontoEl = document.getElementById('pay-monto');
-            if (payMontoEl && payMontoEl.value && Number(payMontoEl.value) > 0) {
-                payload.pago = {
-                    metodoId: document.getElementById('pay-metodo') ? document.getElementById('pay-metodo').value : null,
-                    monto: document.getElementById('pay-monto').value,
-                    Mes_referencia: document.getElementById('pay-mes') ? document.getElementById('pay-mes').value : null,
-                    moneda: document.getElementById('pay-moneda') ? document.getElementById('pay-moneda').value : 'bs',
-                    referencia: document.getElementById('pay-referencia') ? document.getElementById('pay-referencia').value : null,
-                    idCuenta_Destino: document.getElementById('pay-cuenta') ? document.getElementById('pay-cuenta').value : null
-                };
-                // Validate Pago Móvil requirements if method is Pago Móvil
-                try {
-                    const mid = payload.pago.metodoId;
-                    const methodObj = metodosCache.find(m => String(m.idMetodos_pago) === String(mid));
-                    const mname = methodObj ? String(methodObj.Nombre || '').toLowerCase() : '';
-                    const mtipo = methodObj ? String(methodObj.Tipo_Validacion || '').toLowerCase() : '';
-                    const isMovil = mtipo.includes('movil') || mname.includes('pago movil') || mname.includes('movil');
-                    if (isMovil) {
-                        const ref = payload.pago.referencia;
-                        const m = Number(payload.pago.monto || 0);
-                        if (!ref || String(ref).trim() === '') {
-                            const errEl = document.getElementById('add-student-error');
-                            errEl.textContent = 'Pago móvil requiere referencia de la transacción';
-                            errEl.classList.add('visible');
-                            return;
-                        }
-                        if (isNaN(m) || m <= 0) {
-                            const errEl = document.getElementById('add-student-error');
-                            errEl.textContent = 'Pago móvil requiere el monto de la transacción';
-                            errEl.classList.add('visible');
-                            return;
-                        }
-                    }
-                } catch (vErr) {
-                    console.warn('Validación Pago Móvil (add-student) falló:', vErr);
-                }
-            }
+            // Datos del representante (si es menor)
             const edad = calcularEdad(payload.Fecha_Nacimiento);
             if (edad < 18) {
                 payload.representante = {
@@ -895,46 +919,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                     Correo: document.getElementById('rep-Correo').value
                 };
             }
-            // Si el form tiene data-edit-id, es edición
-            const editId = addStudentForm.getAttribute('data-edit-id');
-            let url = 'http://localhost:3000/api/estudiantes';
-            let method = 'POST';
-            if (editId) {
-                url += `/${editId}`;
-                method = 'PUT';
-            }
+
+            // 6. Enviar al servidor
             try {
+                const editId = addStudentForm.getAttribute('data-edit-id');
+                const url = editId ? `http://localhost:3000/api/estudiantes/${editId}` : 'http://localhost:3000/api/estudiantes';
+                const method = editId ? 'PUT' : 'POST';
+
                 const response = await fetch(url, {
-                    method,
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+
                 const result = await response.json();
+
                 if (result.success) {
-                    alert(editId ? 'Estudiante editado correctamente' : 'Estudiante creado correctamente');
+                    alert(editId ? '✅ Estudiante actualizado con éxito' : '✅ Estudiante creado con éxito');
                     addStudentModal.style.display = 'none';
-                    addStudentForm.removeAttribute('data-edit-id');
-                    document.getElementById('student-modal-title').textContent = 'Agregar Estudiante';
                     addStudentForm.reset();
-                    // reset fecha de inscripción to today
-                    const fechaInsInput = document.getElementById('ins-Fecha_inscripcion');
-                    if (fechaInsInput) fechaInsInput.value = new Date().toISOString().slice(0,10);
-                    // refresh current view: if viewing a group, reload its students; otherwise reload cards
-                    if (currentGroupId) {
-                        await renderStudentsForGroup(currentGroupId, currentGroupName);
+
+                    // Recargar la lista
+                    if (typeof currentGroupId !== 'undefined' && currentGroupId) {
+                        renderStudentsForGroup(currentGroupId, currentGroupName);
                     } else {
-                        await renderGroupCards();
+                        renderGroupCards();
                     }
                 } else {
-                    const errEl = document.getElementById('add-student-error');
-                    errEl.textContent = result.message || (editId ? 'Error al editar estudiante' : 'Error al crear estudiante');
-                    errEl.classList.add('visible');
+                    // Error reportado por el servidor (ej. Cédula duplicada)
+                    console.error("Error del servidor:", result);
+                    alert("❌ No se pudo guardar: " + (result.message || "Error desconocido"));
+                    if (errorMsg) {
+                        errorMsg.textContent = result.message;
+                        errorMsg.classList.add('visible');
+                    }
                 }
             } catch (err) {
-                console.error(editId ? 'Error editando estudiante:' : 'Error creando estudiante:', err);
-                const errEl = document.getElementById('add-student-error');
-                errEl.textContent = editId ? 'Error al conectar con el servidor (edición)' : 'Error al conectar con el servidor';
-                errEl.classList.add('visible');
+                console.error("Error de conexión:", err);
+                alert("❌ Error de conexión con el servidor. Revisa que el backend esté corriendo.");
             }
         });
     }
