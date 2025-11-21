@@ -131,13 +131,17 @@
   position: relative;
 }
 
-/* Keep form grid spacing consistent */
+/* Keep form grid spacing consistent - row-two should span both columns */
 .row-two {
-  display: flex;
-  gap: 12px;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  margin-top: 10px;
 }
 .row-two .input-group {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Modal and form styles (moved from gestion.css for estudiantes view) */
@@ -157,12 +161,12 @@
 .modal-content {
   background-color: #ffffff;
   margin: 0;
-  padding: 30px 40px;
+  padding: 35px 45px;
   border: none;
-  border-radius: 15px;
+  border-radius: 12px;
   width: 90%;
-  max-width: 750px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  max-width: 800px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
@@ -195,8 +199,8 @@
 #add-student-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  column-gap: 30px;
-  row-gap: 20px;
+  column-gap: 25px;
+  row-gap: 18px;
 }
 
 .input-group {
@@ -207,30 +211,30 @@
 
 .input-group label {
   font-weight: 600;
-  color: #444;
-  margin-bottom: 8px;
-  font-size: 0.95em;
-  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 6px;
+  font-size: 0.9em;
+  text-align: left;
   display: block;
   width: 100%;
 }
 
 .input-group input,
 .input-group select {
-  padding: 12px 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
   font-size: 14px;
-  background-color: #f0f2f5;
-  transition: all 0.3s ease;
+  background-color: #fafafa;
+  transition: all 0.2s ease;
   text-align: left;
 }
 
 .input-group input:focus,
 .input-group select:focus {
-  border-color: #40c4ff;
+  border-color: #2196f3;
   background-color: #fff;
-  box-shadow: 0 0 0 4px rgba(64, 196, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   outline: none;
 }
 

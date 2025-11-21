@@ -74,21 +74,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         }
 
-                        // calcular edad a partir de Fecha_Nacimiento
+                        // Usar edad del backend
                         let edadDisplay = '—';
-                        try {
-                            if (s.Fecha_Nacimiento) {
-                                const calc = calcularEdad(s.Fecha_Nacimiento);
-                                edadDisplay = isNaN(calc) ? '—' : calc;
-                            }
-                        } catch (e) {
-                            edadDisplay = '—';
+                        if (s.edad !== null && s.edad !== undefined) {
+                            edadDisplay = s.edad;
                         }
+
+                        // Last Payment Display
+                        let lastPayDisplay = '—';
+                        if (s.lastPayment) {
+                            const p = s.lastPayment;
+                            const metodo = p.Metodo || 'Pago';
+                            const monto = p.Monto_usd ? `${p.Monto_usd}` : (p.Monto_bs ? `Bs.${p.Monto_bs}` : '');
+                            const ref = p.Referencia ? `Ref: ${p.Referencia}` : '';
+                            const mes = p.Mes_Pagado ? `Mes: ${formatMes(p.Mes_Pagado)}` : '';
+                            
+                            // Combine parts
+                            let details = [];
+                            if (ref) details.push(ref);
+                            if (mes) details.push(mes);
+                            const detailStr = details.length ? `(${details.join(' - ')})` : '';
+                            
+                            lastPayDisplay = `<strong>${metodo}:</strong> ${monto} <small>${detailStr}</small>`;
+                        }
+
+                        // Pending Debt Display - Handles per-group monthly payment status
+                        let debtDisplay = '<span style="color:red; font-weight:bold;">Deuda</span>';
+                        
+                        // Check if solvente (pendingDebt === 0)
+                        if (s.pendingDebt === 0 || s.pendingDebt === '0') {
+                            debtDisplay = '<span style="color:green;">Solvente</span>';
+                        } 
+                        // Check if it's a numeric debt amount
+                        else if (s.pendingDebt && !isNaN(Number(s.pendingDebt)) && Number(s.pendingDebt) > 0) {
+                            debtDisplay = `<span style="color:red; font-weight:bold;">${Number(s.pendingDebt).toFixed(2)}</span>`;
+                        }
+                        // Otherwise keep default "Deuda" (handles string "Deuda" or null/undefined)
 
                         tr.innerHTML = `
                             <td class="student-name" data-id="${s.idEstudiante}" style="cursor:pointer;color:blue;text-decoration:underline;">${s.Nombres || ''} ${s.Apellidos || ''}</td>
                             <td>${edadDisplay}</td>
-                            <td>—</td>
+                            <td>${lastPayDisplay}</td>
+                            <td>${debtDisplay}</td>
                             <td>
                                 <button class="edit-student" data-id="${s.idEstudiante}">Editar</button>
                                 <button class="register-payment" data-id="${s.idEstudiante}" style="margin-left:8px;">Registrar Pago</button>
@@ -165,6 +192,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                             } else {
                                 gruposTbody.innerHTML = '<tr><td colspan="3">No hay historial de grupos.</td></tr>';
                             }
+
+                                // deudas (pendientes)
+                                const deudasTbody = document.querySelector('#det-deudas-table tbody');
+                                deudasTbody.innerHTML = '';
+                                try {
+                                    const deudas = Array.isArray(data.deudas) ? data.deudas : [];
+                                    if (deudas.length === 0) {
+                                        // show small clarifying text when no pending debts
+                                        deudasTbody.innerHTML = '<tr><td colspan="5" style="padding:8px;color:#555;">No posee deudas pendientes.</td></tr>';
+                                    } else {
+                                        deudas.forEach(d => {
+                                            const row = document.createElement('tr');
+                                            const fechaEm = d.Fecha_emision ? (typeof d.Fecha_emision === 'string' && d.Fecha_emision.includes('T') ? d.Fecha_emision.split('T')[0] : new Date(d.Fecha_emision).toISOString().slice(0,10)) : '';
+                                            const fechaVenc = d.Fecha_vencimiento ? (typeof d.Fecha_vencimiento === 'string' && d.Fecha_vencimiento.includes('T') ? d.Fecha_vencimiento.split('T')[0] : new Date(d.Fecha_vencimiento).toISOString().slice(0,10)) : '';
+                                            const totalPagado = (d.Total_Pagado != null) ? Number(d.Total_Pagado) : 0;
+                                            const montoUsd = d.Monto_usd != null ? Number(d.Monto_usd) : 0;
+                                            const pendiente = (montoUsd - totalPagado) || 0;
+                                            row.innerHTML = `<td>${d.Concepto || ''}</td><td>${montoUsd != null ? montoUsd.toFixed(4) : ''}</td><td>${fechaEm}</td><td>${fechaVenc}</td><td>${d.Estado || ''}${pendiente > 0 ? ' — Pendiente: $' + pendiente.toFixed(4) : ''}</td>`;
+                                            deudasTbody.appendChild(row);
+                                        });
+                                    }
+                                } catch (deErr) {
+                                    console.error('Error renderizando deudas:', deErr);
+                                    deudasTbody.innerHTML = '<tr><td colspan="5">Error mostrando deudas (ver consola).</td></tr>';
+                                }
 
                             // show modal
                             document.getElementById('student-details-modal').style.display = 'flex';
