@@ -57,84 +57,97 @@ exports.createPayment = async (req, res) => {
 
         const Fecha_pago = payload.Fecha_pago || new Date().toISOString().slice(0,19).replace('T', ' ');
 
-        const idPago = await Estudiante.createPago({
-            idDeuda: idDeuda || null,
-            idMetodos_pago: metodoId,
-            idCuenta_Destino: payload.idCuenta_Destino || null,
-            idEstudiante,
-            Referencia: referencia,
-            Mes_referencia: payload.Mes_referencia || null,
-            Monto_bs,
-            Tasa_Pago,
-            Monto_usd,
-            Fecha_pago
-        });
-
-        // If a month reference or group is provided, attempt to create a control_mensualidades record
+        // Execute all payment-related writes inside a DB transaction for atomicity
+        const dbConn = await conn.promise().getConnection();
         try {
+            await dbConn.beginTransaction();
+
+            const idPago = await Estudiante.createPago({
+                idDeuda: idDeuda || null,
+                idMetodos_pago: metodoId,
+                idCuenta_Destino: payload.idCuenta_Destino || null,
+                idEstudiante,
+                Referencia: referencia,
+                Mes_referencia: payload.Mes_referencia || null,
+                Monto_bs,
+                Tasa_Pago,
+                Monto_usd,
+                Fecha_pago
+            }, dbConn);
+
+            // control_mensualidades insertion (if requested)
             const mesRef = payload.Mes_referencia || payload.Mes || null;
             const idGrupoControl = payload.idGrupo || payload.idGrupo_control || null;
-            
-            console.log('Control Mensualidades - mesRef:', mesRef, 'idGrupo:', idGrupoControl);
-            
             if (mesRef) {
-                // Insert using STR_TO_DATE to accept 'YYYY-MM' from frontend (input[type=month])
-                // Note: control_mensualidades uses Mes_date column, not Mes
-                console.log('Inserting control_mensualidades with month:', mesRef);
-                const [result] = await conn.promise().query(
-                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes_date, idGrupo)
-                     VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
-                    [idEstudiante, idPago, mesRef, idGrupoControl]
+                let mesRefNormalized = mesRef;
+                const mMatch = mesRef.match(/^(\d{4}-\d{2})/);
+                if (mMatch) mesRefNormalized = mMatch[1];
+                const yearInt = Number(mesRefNormalized.split('-')[0]);
+                const monthInt = Number(mesRefNormalized.split('-')[1]);
+                await dbConn.promise().query(
+                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Year, Mes_date, idGrupo)
+                     VALUES (?, ?, ?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
+                    [idEstudiante, idPago, monthInt, yearInt, mesRefNormalized, idGrupoControl]
                 );
-                console.log('Control mensualidades inserted successfully, ID:', result.insertId);
             } else if (idGrupoControl) {
-                // If only group provided, insert with current month
-                const todayMonth = new Date().toISOString().slice(0,7); // 'YYYY-MM'
-                console.log('Inserting control_mensualidades with current month:', todayMonth);
-                const [result] = await conn.promise().query(
-                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes_date, idGrupo)
-                     VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
-                    [idEstudiante, idPago, todayMonth, idGrupoControl]
+                const now = new Date();
+                const todayMonthStr = now.toISOString().slice(0,7);
+                const yearInt = now.getFullYear();
+                const monthInt = now.getMonth() + 1;
+                await dbConn.promise().query(
+                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Year, Mes_date, idGrupo)
+                     VALUES (?, ?, ?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
+                    [idEstudiante, idPago, monthInt, yearInt, todayMonthStr, idGrupoControl]
                 );
-                console.log('Control mensualidades inserted successfully, ID:', result.insertId);
-            } else {
-                console.log('No month or group provided, skipping control_mensualidades insertion');
             }
-        } catch (cmErr) {
-            // Don't fail the payment if control insertion fails; log for debugging
-            console.error('ERROR inserting control_mensualidades:', cmErr);
-            console.error('Error details:', {
-                message: cmErr.message,
-                code: cmErr.code,
-                sqlMessage: cmErr.sqlMessage,
-                sql: cmErr.sql
-            });
-        }
 
-        // parciales: array of { monto, idDeuda? }
-        if (parciales.length) {
-            for (const p of parciales) {
-                const montoPar = Number(p.monto || 0);
-                if (!isNaN(montoPar) && montoPar > 0) {
-                    await Estudiante.createPagoParcial({ idPago, idDeuda: p.idDeuda || idDeuda || null, Monto_parcial: montoPar });
+            // parciales
+            const deudaIdsToReconcile = new Set();
+            if (idDeuda) deudaIdsToReconcile.add(idDeuda);
+            if (parciales.length) {
+                for (const p of parciales) {
+                    const montoPar = Number(p.monto || 0);
+                    const parcialDeuda = p.idDeuda || idDeuda || null;
+                    if (!isNaN(montoPar) && montoPar > 0) {
+                        await Estudiante.createPagoParcial({ idPago, idDeuda: parcialDeuda, Monto_parcial: montoPar }, dbConn);
+                        if (parcialDeuda) deudaIdsToReconcile.add(parcialDeuda);
+                    }
                 }
             }
-        }
 
-        // billetes: array of { Codigo_billete, Denominacion }
-        if (billetes.length) {
-            for (const b of billetes) {
-                const codigo = b.Codigo_billete || b.codigo || null;
-                const denom = Number(b.Denominacion || b.denom || 0);
-                if (!codigo || isNaN(denom) || denom <= 0) continue;
-                await conn.promise().query(
-                    'INSERT INTO billetes_cash (idPago, Codigo_billete, Denominacion) VALUES (?, ?, ?)',
-                    [idPago, codigo, denom]
-                );
+            // billetes
+            if (billetes.length) {
+                for (const b of billetes) {
+                    const codigo = b.Codigo_billete || b.codigo || null;
+                    const denom = Number(b.Denominacion || b.denom || 0);
+                    if (!codigo || isNaN(denom) || denom <= 0) continue;
+                    await dbConn.promise().query(
+                        'INSERT INTO billetes_cash (idPago, Codigo_billete, Denominacion) VALUES (?, ?, ?)',
+                        [idPago, codigo, denom]
+                    );
+                }
             }
-        }
 
-        return res.json({ success: true, idPago, Monto_bs, Monto_usd, Tasa_Pago });
+            // Reconcile deudas referenced by the payment / parciales
+            try {
+                for (const dId of Array.from(deudaIdsToReconcile)) {
+                    if (!dId) continue;
+                    await Estudiante.reconcileDeuda(dId, dbConn);
+                }
+            } catch (recErr) {
+                // If reconcile fails, rollback below will handle it; include context for debugging
+                throw new Error('Error reconciling deudas: ' + (recErr && recErr.message ? recErr.message : recErr));
+            }
+
+            await dbConn.commit();
+            dbConn.release();
+            return res.json({ success: true, idPago, Monto_bs, Monto_usd, Tasa_Pago });
+        } catch (txErr) {
+            try { await dbConn.rollback(); } catch (rbErr) { console.error('Rollback error:', rbErr); }
+            try { dbConn.release(); } catch (relErr) { }
+            console.error('Error creating payment transaction:', txErr);
+            return res.status(500).json({ success: false, message: 'Error creando pago (transacción)', error: txErr && txErr.message });
+        }
     } catch (err) {
         console.error('Error creating payment:', err);
         return res.status(500).json({ 

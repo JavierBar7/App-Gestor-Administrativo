@@ -193,6 +193,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 gruposTbody.innerHTML = '<tr><td colspan="3">No hay historial de grupos.</td></tr>';
                             }
 
+                                // deudas (pendientes)
+                                const deudasTbody = document.querySelector('#det-deudas-table tbody');
+                                deudasTbody.innerHTML = '';
+                                try {
+                                    const deudas = Array.isArray(data.deudas) ? data.deudas : [];
+                                    if (deudas.length === 0) {
+                                        // show small clarifying text when no pending debts
+                                        deudasTbody.innerHTML = '<tr><td colspan="5" style="padding:8px;color:#555;">No posee deudas pendientes.</td></tr>';
+                                    } else {
+                                        deudas.forEach(d => {
+                                            const row = document.createElement('tr');
+                                            const fechaEm = d.Fecha_emision ? (typeof d.Fecha_emision === 'string' && d.Fecha_emision.includes('T') ? d.Fecha_emision.split('T')[0] : new Date(d.Fecha_emision).toISOString().slice(0,10)) : '';
+                                            const fechaVenc = d.Fecha_vencimiento ? (typeof d.Fecha_vencimiento === 'string' && d.Fecha_vencimiento.includes('T') ? d.Fecha_vencimiento.split('T')[0] : new Date(d.Fecha_vencimiento).toISOString().slice(0,10)) : '';
+                                            const totalPagado = (d.Total_Pagado != null) ? Number(d.Total_Pagado) : 0;
+                                            const montoUsd = d.Monto_usd != null ? Number(d.Monto_usd) : 0;
+                                            const pendiente = (montoUsd - totalPagado) || 0;
+                                            row.innerHTML = `<td>${d.Concepto || ''}</td><td>${montoUsd != null ? montoUsd.toFixed(4) : ''}</td><td>${fechaEm}</td><td>${fechaVenc}</td><td>${d.Estado || ''}${pendiente > 0 ? ' — Pendiente: $' + pendiente.toFixed(4) : ''}</td>`;
+                                            deudasTbody.appendChild(row);
+                                        });
+                                    }
+                                } catch (deErr) {
+                                    console.error('Error renderizando deudas:', deErr);
+                                    deudasTbody.innerHTML = '<tr><td colspan="5">Error mostrando deudas (ver consola).</td></tr>';
+                                }
+
                             // show modal
                             document.getElementById('student-details-modal').style.display = 'flex';
                             // Actions are provided in the table's actions column; no injection needed here.

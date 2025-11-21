@@ -71,7 +71,7 @@
     static async getLastPaymentsForStudent(idEstudiante, limit = 3) {
         const [rows] = await conn.promise().query(
             `SELECT p.idPago, p.Referencia, p.Monto_bs, p.Monto_usd, p.Fecha_pago,
-                    cm.Mes AS Mes_control, cm.Observacion, cm.idGrupo AS idGrupo_control, g.Nombre_Grupo AS Grupo_nombre
+                    cm.Mes_date AS Mes_control, cm.Mes AS Mes_num, cm.Year AS Year_num, cm.Observacion, cm.idGrupo AS idGrupo_control, g.Nombre_Grupo AS Grupo_nombre
              FROM pagos p
              LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago AND cm.idEstudiante = p.idEstudiante
              LEFT JOIN grupos g ON g.idGrupo = cm.idGrupo
@@ -89,7 +89,7 @@
         return rows && rows.length ? rows[0].Tasa_usd_a_bs : null;
     }
 
-    static async createPago({ idDeuda = null, idMetodos_pago = null, idCuenta_Destino = null, idEstudiante = null, Referencia = null, Mes_referencia = null, Monto_bs = null, Tasa_Pago = null, Monto_usd = null, Fecha_pago = null }) {
+    static async createPago({ idDeuda = null, idMetodos_pago = null, idCuenta_Destino = null, idEstudiante = null, Referencia = null, Mes_referencia = null, Monto_bs = null, Tasa_Pago = null, Monto_usd = null, Fecha_pago = null }, dbConn = null) {
         
         // Sanitize Mes_referencia if it's YYYY-MM to YYYY-MM-01 for DATE columns
         let mesRefFinal = Mes_referencia;
@@ -98,9 +98,10 @@
         }
 
         // Helper to execute query and handle specific errors
+        const executor = dbConn ? dbConn.promise() : conn.promise();
         const tryInsert = async (query, params) => {
             try {
-                const [result] = await conn.promise().query(query, params);
+                const [result] = await executor.query(query, params);
                 return result.insertId;
             } catch (err) {
                 throw err;
@@ -109,7 +110,7 @@
 
         // 1. Try Full Insert (with idDeuda and Mes_referencia)
         try {
-            return await tryInsert(
+                    return await tryInsert(
                 'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Mes_referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, mesRefFinal, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
             );
@@ -151,11 +152,63 @@
     }
 
     static async createPagoParcial({ idPago = null, idDeuda = null, Monto_parcial = null }) {
-        const [result] = await conn.promise().query(
+        // Support optional dbConn passed via last argument
+        let dbConn = null;
+        if (arguments && arguments.length === 2 && arguments[1]) dbConn = arguments[1];
+        const executor = dbConn ? dbConn.promise() : conn.promise();
+        const [result] = await executor.query(
             'INSERT INTO pagos_parciales (idPago, idDeuda, Monto_parcial) VALUES (?, ?, ?)',
             [idPago, idDeuda, Monto_parcial]
         );
         return result.insertId;
+    }
+
+    /**
+     * Reconcile a deuda: compute total paid (pagos + pagos_parciales) for the deuda
+     * and mark the deuda as 'Pagada' if fully covered.
+     * This should be called inside the same DB transaction that created the payments.
+     */
+    static async reconcileDeuda(idDeuda, dbConn = null) {
+        if (!idDeuda) return false;
+        const executor = dbConn ? dbConn.promise() : conn.promise();
+
+        // Lock the deuda row to avoid race conditions
+        const [deudaRows] = await executor.query(
+            'SELECT idDeuda, Monto_usd, Estado FROM deudas WHERE idDeuda = ? FOR UPDATE',
+            [idDeuda]
+        );
+        if (!Array.isArray(deudaRows) || deudaRows.length === 0) return false;
+        const deuda = deudaRows[0];
+        // If already marked as Pagada, nothing to do
+        if (String(deuda.Estado).toLowerCase() === 'pagada') return true;
+
+        // Sum pagos (Monto_usd) and pagos_parciales (Monto_parcial)
+        const [pagosSumRows] = await executor.query(
+            'SELECT COALESCE(SUM(Monto_usd),0) AS total_pagos FROM pagos WHERE idDeuda = ?',
+            [idDeuda]
+        );
+        const totalPagos = pagosSumRows && pagosSumRows[0] ? Number(pagosSumRows[0].total_pagos || 0) : 0;
+
+        const [parcialesSumRows] = await executor.query(
+            'SELECT COALESCE(SUM(Monto_parcial),0) AS total_parciales FROM pagos_parciales WHERE idDeuda = ?',
+            [idDeuda]
+        );
+        const totalParciales = parcialesSumRows && parcialesSumRows[0] ? Number(parcialesSumRows[0].total_parciales || 0) : 0;
+
+        const totalPagado = Number((totalPagos + totalParciales).toFixed(4));
+        const montoDeuda = Number(deuda.Monto_usd || 0);
+
+        if (totalPagado >= montoDeuda && montoDeuda > 0) {
+            // Mark deuda as Pagada
+            await executor.query(
+                "UPDATE deudas SET Estado = 'Pagada' WHERE idDeuda = ?",
+                [idDeuda]
+            );
+            return true;
+        }
+
+        // Not fully paid yet
+        return false;
     }
 
     static async getEstudiantes() {
@@ -341,28 +394,64 @@
         // Format current month as 'YYYY-MM' for comparison with Mes_date
         const currentMonthStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
         
-        // Check if current month payment exists for this group
-        // Using Mes_date column which is populated by payment registration
-        const [currentMonthPayment] = await conn.promise().query(
-            `SELECT cm.* FROM control_mensualidades cm
-             WHERE cm.idEstudiante = ? 
-             AND cm.idGrupo = ? 
-             AND DATE_FORMAT(cm.Mes_date, '%Y-%m') = ?`,
-            [idEstudiante, idGrupo, currentMonthStr]
-        );
-        
-        // If we're past day 5 and no payment for current month
-        if (currentDay > 5 && currentMonthPayment.length === 0) {
+        // 1) If the student has any unpaid debts (Estado != 'Pagada'), treat as Deuda.
+        // This now includes debts emitted in the current month as requested.
+        try {
+            const [anyDebts] = await conn.promise().query(
+                `SELECT d.idDeuda FROM deudas d
+                 WHERE d.idEstudiante = ? AND d.Estado != 'Pagada' LIMIT 1`,
+                [idEstudiante]
+            );
+            if (Array.isArray(anyDebts) && anyDebts.length > 0) {
+                return { hasDebt: true, status: 'Deuda' };
+            }
+        } catch (ePrev) {
+            console.warn('Warning checking unpaid debts:', ePrev && ePrev.message ? ePrev.message : ePrev);
+            // If error checking debts, be conservative and treat as debt
             return { hasDebt: true, status: 'Deuda' };
         }
-        
-        // If current month is paid OR we're still within grace period (day 1-5)
-        if (currentMonthPayment.length > 0 || currentDay <= 5) {
-            return { hasDebt: false, status: 'Solvente' };
+
+        // 2) Check if current month payment (control) exists for this group
+        let currentMonthPaymentRows = [];
+        try {
+            const [rows] = await conn.promise().query(
+                `SELECT cm.idControl, cm.idPago FROM control_mensualidades cm
+                 WHERE cm.idEstudiante = ? AND cm.idGrupo = ? AND DATE_FORMAT(cm.Mes_date, '%Y-%m') = ? LIMIT 1`,
+                [idEstudiante, idGrupo, currentMonthStr]
+            );
+            currentMonthPaymentRows = Array.isArray(rows) ? rows : [];
+        } catch (eCm) {
+            console.warn('Warning checking control_mensualidades:', eCm && eCm.message ? eCm.message : eCm);
+            // conservative: if we cannot verify, treat as debt
+            return { hasDebt: true, status: 'Deuda' };
         }
-        
-        // Default to debt
-        return { hasDebt: true, status: 'Deuda' };
+
+        // If no control for current month
+        if (!currentMonthPaymentRows || currentMonthPaymentRows.length === 0) {
+            // within grace period (1-5) -> solvente
+            if (currentDay <= 5) return { hasDebt: false, status: 'Solvente' };
+            // after day 5 -> deuda
+            return { hasDebt: true, status: 'Deuda' };
+        }
+
+        // 3) If there is a control entry, ensure it's a full payment (not parcial)
+        try {
+            const ctrl = currentMonthPaymentRows[0];
+            const idPago = ctrl.idPago;
+            // If there are pagos_parciales associated to this idPago, treat as partial -> Deuda
+            const [parciales] = await conn.promise().query(
+                `SELECT COUNT(*) AS cnt FROM pagos_parciales WHERE idPago = ?`, [idPago]
+            );
+            const cnt = parciales && parciales[0] ? Number(parciales[0].cnt || 0) : 0;
+            if (cnt > 0) {
+                return { hasDebt: true, status: 'Deuda' };
+            }
+            // Otherwise consider full payment and solvent
+            return { hasDebt: false, status: 'Solvente' };
+        } catch (eFinal) {
+            console.warn('Warning verifying parcial payments:', eFinal && eFinal.message ? eFinal.message : eFinal);
+            return { hasDebt: true, status: 'Deuda' };
+        }
     }
 }
 
