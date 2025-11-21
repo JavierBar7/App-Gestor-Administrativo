@@ -45,8 +45,9 @@ exports.getEstudianteDetails = async (req, res) => {
         const pagos = await Estudiante.getPaymentsByStudent(id);
         const representante = await Estudiante.getRepresentanteByStudent(id);
         const grupos = await Estudiante.getGroupsByStudent(id);
+        const deudas = await Estudiante.getDeudasByStudent(id);
 
-        return res.json({ success: true, estudiante, pagos, representante, grupos });
+        return res.json({ success: true, estudiante, pagos, representante, grupos, deudas });
     } catch (err) {
         console.error('Error obteniendo detalles del estudiante:', err);
         return res.status(500).json({ success: false, message: 'Error al obtener detalles del estudiante' });

@@ -298,6 +298,72 @@
         
         return result;
     }
+    static async getLastPaymentTransaction(idEstudiante) {
+        const [rows] = await conn.promise().query(
+            `SELECT p.idPago, p.Referencia, p.Monto_bs, p.Monto_usd, p.Fecha_pago,
+                    mp.Nombre AS Metodo,
+                    COALESCE(cm.Mes_date, p.Fecha_pago) AS Mes_Pagado
+             FROM pagos p
+             LEFT JOIN metodos_pagos mp ON mp.idMetodos_pago = p.idMetodos_pago
+             LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago
+             WHERE p.idEstudiante = ?
+             ORDER BY p.Fecha_pago DESC LIMIT 1`,
+            [idEstudiante]
+        );
+        return rows && rows.length ? rows[0] : null;
+    }
+
+    static async getTotalPendingDebt(idEstudiante) {
+        const [rows] = await conn.promise().query(
+            `SELECT 
+                SUM(d.Monto_usd - (
+                    COALESCE((SELECT SUM(p.Monto_usd) FROM pagos p WHERE p.idDeuda = d.idDeuda), 0) + 
+                    COALESCE((SELECT SUM(pp.Monto_parcial) FROM pagos_parciales pp WHERE pp.idDeuda = d.idDeuda), 0)
+                )) AS Deuda_Pendiente
+             FROM deudas d
+             WHERE d.idEstudiante = ? AND d.Estado != 'Pagada'`,
+            [idEstudiante]
+        );
+        return rows && rows.length ? (Number(rows[0].Deuda_Pendiente) || 0) : 0;
+    }
+
+    /**
+     * Check if student has debt for a specific group based on monthly payment deadline
+     * Payment deadline: 5th of each month (debt starts on day 6)
+     * Only checks current month
+     */
+    static async getGroupDebtStatus(idEstudiante, idGrupo) {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // 1-12
+        const currentYear = now.getFullYear();
+        const currentDay = now.getDate();
+        
+        // Format current month as 'YYYY-MM' for comparison with Mes_date
+        const currentMonthStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+        
+        // Check if current month payment exists for this group
+        // Using Mes_date column which is populated by payment registration
+        const [currentMonthPayment] = await conn.promise().query(
+            `SELECT cm.* FROM control_mensualidades cm
+             WHERE cm.idEstudiante = ? 
+             AND cm.idGrupo = ? 
+             AND DATE_FORMAT(cm.Mes_date, '%Y-%m') = ?`,
+            [idEstudiante, idGrupo, currentMonthStr]
+        );
+        
+        // If we're past day 5 and no payment for current month
+        if (currentDay > 5 && currentMonthPayment.length === 0) {
+            return { hasDebt: true, status: 'Deuda' };
+        }
+        
+        // If current month is paid OR we're still within grace period (day 1-5)
+        if (currentMonthPayment.length > 0 || currentDay <= 5) {
+            return { hasDebt: false, status: 'Solvente' };
+        }
+        
+        // Default to debt
+        return { hasDebt: true, status: 'Deuda' };
+    }
 }
 
 module.exports = { Estudiante };

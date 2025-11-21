@@ -89,8 +89,16 @@ const estudiantesPorGrupo = async (req, res) => {
                 if (m < 0 || (m === 0 && hoy.getDate() < fn.getDate())) edadCalc--;
                 return edadCalc;
             })();
-            const paymentSummary = await Estudiante.getPaymentSummary(e.idEstudiante);
-            return { ...e, edad, paymentSummary };
+            
+            const lastPayment = await Estudiante.getLastPaymentTransaction(e.idEstudiante);
+            
+            // NEW: Get debt status for THIS specific group based on monthly payment deadline
+            const debtStatus = await Estudiante.getGroupDebtStatus(e.idEstudiante, idGrupo);
+            
+            // Return 0 if solvente, 'Deuda' string if has debt
+            const pendingDebt = debtStatus.hasDebt ? 'Deuda' : 0;
+
+            return { ...e, edad, lastPayment, pendingDebt };
         }));
 
         return res.json(mapped);
