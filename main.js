@@ -102,3 +102,13 @@ ipcMain.on('navigate-cursos', (event) => {
         win.loadFile(path.join(__dirname, 'src/views/cursos.html'));
     }
 });
+
+// --- 👇 NUEVO BLOQUE PARA DEUDORES 👇 ---
+// Navegar a vista de deudores
+ipcMain.on('navigate-deudores', (event) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+        // Asegúrate de que este archivo exista en src/views/deudores.html
+        win.loadFile(path.join(__dirname, 'src/views/deudores.html'));
+    }
+});

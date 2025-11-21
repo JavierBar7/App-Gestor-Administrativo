@@ -18,8 +18,8 @@
             <nav class="nav-menu">
                 <ul>
                     <li><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
-                    <li><a href="#" id="view-students-btn">Estudiantes</a></li>
-                    <li><a href="#" id="view-cursos-btn">Cursos</a></li>
+                    <li class="active"><a href="#" id="view-students-btn">Estudiantes</a></li> <li><a href="#" id="view-cursos-btn">Cursos</a></li>
+                    <li><a href="#" id="view-deudores-btn">Deudores</a></li>
                     <li class="logout-container"><button id="logout-btn" class="logout-btn" title="Cerrar sesión"><img src="../../public/MiLogOut.png" alt="Salir"/></button></li>
                 </ul>
             </nav>
@@ -36,7 +36,6 @@
                 <span id="tasa-msg" style="margin-left:8px;color:#2a7;display:none;"></span>
             </div>
 
-            <!-- Historial de tasas modal -->
             <div id="tasa-hist-modal" class="modal" style="display:none;">
                 <div class="modal-content large">
                     <span class="close-button" id="close-tasa-hist">&times;</span>
@@ -54,12 +53,9 @@
                 <button id="add-student-btn">Agregar Estudiante</button>
             </div>
 
-            <!-- Grupos cards view -->
             <div id="grupos-cards" class="cards-container" style="display: flex; flex-wrap: wrap; gap: 12px;">
-                <!-- cards rendered here -->
-            </div>
+                </div>
 
-            <!-- Students list for selected group (hidden until a group is selected) -->
             <div id="grupo-students" style="margin-top:20px; display:none;">
                 <h2 id="grupo-students-title">Estudiantes</h2>
                 <button id="back-to-groups">Volver a Grupos</button>
@@ -81,7 +77,6 @@
                 </div>
             </div>
 
-        <!-- Student details modal -->
         <div id="student-details-modal" class="modal" style="display:none;">
             <div class="modal-content large">
                 <span class="close-button" id="close-student-details">&times;</span>
@@ -208,7 +203,6 @@
                             <input type="text" id="ins-grupo-autocomplete" placeholder="Buscar grupo..." autocomplete="off">
                             <div id="ins-grupo-suggestions" class="suggestions" style="position:relative;"></div>
                             <div id="ins-selected-grupos" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;"></div>
-                            <!-- Hidden fallback select (kept for backwards compatibility) -->
                             <select id="ins-idGrupo" style="display:none;">
                                 <option value="">-- Seleccione un grupo --</option>
                             </select>

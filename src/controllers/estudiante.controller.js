@@ -1,17 +1,4 @@
-exports.updateEstudiante = async (req, res) => {
-    try {
-        const id = req.params.id;
-        const success = await Estudiante.updateEstudiante(id, req.body);
-        if (success) {
-            return res.json({ success: true });
-        } else {
-            return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
-        }
-    } catch (error) {
-        console.error('Error actualizando estudiante:', error);
-        return res.status(500).json({ success: false, message: 'Error al actualizar estudiante' });
-    }
-};const { Estudiante } = require('../models/Estudiante');
+const { Estudiante } = require('../models/Estudiante');
 const { Grupo } = require('../models/Grupo');
 
 // Helper para calcular edad (años completos)
@@ -25,6 +12,21 @@ function calcularEdad(fechaStr) {
     }
     return edad;
 }
+
+exports.updateEstudiante = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const success = await Estudiante.updateEstudiante(id, req.body);
+        if (success) {
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+        }
+    } catch (error) {
+        console.error('Error actualizando estudiante:', error);
+        return res.status(500).json({ success: false, message: 'Error al actualizar estudiante' });
+    }
+};
 
 exports.getEstudiantes = async (req, res) => {
     try {
@@ -93,10 +95,10 @@ exports.createEstudiante = async (req, res) => {
         // registrar inscripción: permitimos varios grupos mediante payload.grupos (array de idGrupo)
         if (Array.isArray(payload.grupos) && payload.grupos.length > 0) {
             const fechaIns = payload.Fecha_inscripcion || new Date().toISOString().slice(0,10);
-            // iterate groups and create inscripciones for each valid group
             const invalidGroups = [];
             for (const gid of payload.grupos) {
                 try {
+                    const { Grupo } = require('../models/Grupo'); // Importar aquí para evitar circular si fuera necesario
                     const grupo = await Grupo.findById(gid);
                     if (!grupo) {
                         invalidGroups.push(gid);
@@ -109,14 +111,12 @@ exports.createEstudiante = async (req, res) => {
                 }
             }
             if (invalidGroups.length === payload.grupos.length) {
-                // no inscripciones válidas
                 return res.status(400).json({ success: false, message: 'Ningún grupo válido fue encontrado para la inscripción.' });
             }
         } else {
-            // backward-compatible single inscripcion via idGrupo or idCurso
             let idCursoParaInscripcion = null;
             if (payload.idGrupo) {
-                // resolver idCurso desde tabla grupos
+                const { Grupo } = require('../models/Grupo');
                 const grupo = await Grupo.findById(payload.idGrupo);
                 if (!grupo) {
                     return res.status(400).json({ success: false, message: 'Grupo seleccionado no existe' });
@@ -128,7 +128,6 @@ exports.createEstudiante = async (req, res) => {
 
             if (idCursoParaInscripcion) {
                 const fechaIns = payload.Fecha_inscripcion || new Date().toISOString().slice(0,10);
-                // pass idGrupo when available so inscripcion links to the group
                 const idGrupoForIns = payload.idGrupo || null;
                 await Estudiante.createInscripcion(idEstudiante, idCursoParaInscripcion, fechaIns, idGrupoForIns);
             }
@@ -138,10 +137,18 @@ exports.createEstudiante = async (req, res) => {
         if (payload.pago) {
             try {
                 const pago = payload.pago;
-                // validar campos mínimos del pago
-                if (!pago.monto || !pago.metodoId) {
+                const metodoId = Number(pago.metodoId);
+
+                if (!pago.monto || !metodoId) {
                     return res.status(400).json({ success: false, message: 'Faltan datos del pago: monto o método.' });
                 }
+
+                // --- LÓGICA DE CUENTA DESTINO ---
+                let idCuentaAuto = 1; 
+                if (metodoId === 1 || metodoId === 2) {
+                    idCuentaAuto = 2;
+                }
+                const idCuentaFinal = pago.idCuenta_Destino || idCuentaAuto;
 
                 const tasaActual = await Estudiante.getLatestTasa();
                 let Monto_bs = null;
@@ -159,7 +166,6 @@ exports.createEstudiante = async (req, res) => {
                         Monto_bs = Number((Monto_usd * tasaActual).toFixed(4));
                     }
                 } else {
-                    // asumimos bolívares
                     Monto_bs = Number(montoNum.toFixed(4));
                     if (tasaActual) {
                         if (tasaActual === 0) {
@@ -171,12 +177,13 @@ exports.createEstudiante = async (req, res) => {
                 }
 
                 const Fecha_pago = pago.Fecha_pago || new Date().toISOString().slice(0,19).replace('T', ' ');
+                
                 const idPago = await Estudiante.createPago({
                     idDeuda: pago.idDeuda || null,
-                    idMetodos_pago: pago.metodoId,
-                    idCuenta_Destino: pago.idCuenta_Destino || null,
+                    idMetodos_pago: metodoId,
+                    idCuenta_Destino: idCuentaFinal, // <--- Aplicada aquí
                     idEstudiante,
-                    Referencia: pago.referencia || pago.Referencia || null,
+                    Referencia: pago.referencia || pago.Referencia || 'Pendiente',
                     Mes_referencia: pago.Mes_referencia || pago.Mes || null,
                     Monto_bs,
                     Tasa_Pago,
@@ -193,7 +200,6 @@ exports.createEstudiante = async (req, res) => {
                         }
                     }
                 }
-                // anexar idPago al resultado
                 return res.json({ success: true, idEstudiante, idPago });
             } catch (payErr) {
                 console.error('Error registrando pago al crear inscripción:', payErr && payErr.stack ? payErr.stack : payErr);
@@ -206,7 +212,6 @@ exports.createEstudiante = async (req, res) => {
         return res.json({ success: true, idEstudiante });
     } catch (error) {
         console.error('Error creando estudiante:', error && error.stack ? error.stack : error);
-        // Handle duplicate key error for unique fields like Cedula/Correo
         if (error && error.code === 'ER_DUP_ENTRY') {
             const resp = { success: false, message: 'Entrada duplicada en la base de datos.' };
             if (process.env.NODE_ENV !== 'production' && error && error.message) resp.error = error.message;
@@ -226,5 +231,24 @@ exports.getDeudas = async (req, res) => {
     } catch (error) {
         console.error('Error obteniendo deudas:', error);
         return res.status(500).json({ success: false, message: 'Error al obtener deudas' });
+    }
+};
+
+exports.getListadoDeudores = async (req, res) => {
+    try {
+        const deudores = await Estudiante.getDeudores();
+        
+        const deudoresProcesados = deudores.map(d => {
+            const deudaTotal = Number(d.Deuda_Original) - Number(d.Total_Abonado);
+            return {
+                ...d,
+                Deuda_Total: deudaTotal.toFixed(2)
+            };
+        });
+
+        return res.json({ success: true, deudores: deudoresProcesados });
+    } catch (error) {
+        console.error('Error obteniendo deudores:', error);
+        return res.status(500).json({ success: false, message: 'Error al obtener deudores' });
     }
 };

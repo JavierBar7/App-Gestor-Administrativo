@@ -1,14 +1,15 @@
-    const conn = require('../../config/database');
+const conn = require('../../config/database');
 
-    class Estudiante {
-        static async updateEstudiante(idEstudiante, data) {
-            const { Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion } = data;
-            const [result] = await conn.promise().query(
-                'UPDATE estudiantes SET Nombres=?, Apellidos=?, Cedula=?, Fecha_Nacimiento=?, Telefono=?, Correo=?, Direccion=? WHERE idEstudiante=?',
-                [Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion, idEstudiante]
-            );
-            return result.affectedRows > 0;
-        }
+class Estudiante {
+    static async updateEstudiante(idEstudiante, data) {
+        const { Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion } = data;
+        const [result] = await conn.promise().query(
+            'UPDATE estudiantes SET Nombres=?, Apellidos=?, Cedula=?, Fecha_Nacimiento=?, Telefono=?, Correo=?, Direccion=? WHERE idEstudiante=?',
+            [Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion, idEstudiante]
+        );
+        return result.affectedRows > 0;
+    }
+
     static async createEstudiante(data) {
         const { Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion } = data;
         const [result] = await conn.promise().query(
@@ -42,9 +43,7 @@
     }
 
     static async createInscripcion(idEstudiante, idCurso, Fecha_inscripcion, idGrupo = null) {
-        // If idGrupo column exists, include it; otherwise insert without it.
-        // We attempt the insert with idGrupo column — if column doesn't exist this will throw.
-        // Caller should ensure migration was applied.
+        // Si existe la columna idGrupo, la incluimos; de lo contrario insertamos sin ella.
         if (idGrupo) {
             return conn.promise().query(
                 'INSERT INTO inscripciones (idEstudiante, idCurso, Fecha_inscripcion, idGrupo) VALUES (?, ?, ?, ?)',
@@ -61,9 +60,9 @@
     static async findEstudiantesByGrupo(idGrupo) {
         const [rows] = await conn.promise().query(
             `SELECT e.idEstudiante, e.Nombres, e.Apellidos, e.Cedula, e.Fecha_Nacimiento, e.Telefono, e.Correo, e.Direccion
-             FROM estudiantes e
-             JOIN inscripciones i ON i.idEstudiante = e.idEstudiante
-             WHERE i.idGrupo = ?`, [idGrupo]
+            FROM estudiantes e
+            JOIN inscripciones i ON i.idEstudiante = e.idEstudiante
+            WHERE i.idGrupo = ?`, [idGrupo]
         );
         return rows;
     }
@@ -72,11 +71,11 @@
         const [rows] = await conn.promise().query(
             `SELECT p.idPago, p.Referencia, p.Monto_bs, p.Monto_usd, p.Fecha_pago,
                     cm.Mes AS Mes_control, cm.Observacion, cm.idGrupo AS idGrupo_control, g.Nombre_Grupo AS Grupo_nombre
-             FROM pagos p
-             LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago AND cm.idEstudiante = p.idEstudiante
-             LEFT JOIN grupos g ON g.idGrupo = cm.idGrupo
-             WHERE p.idEstudiante = ?
-             ORDER BY p.Fecha_pago DESC LIMIT ?`,
+            FROM pagos p
+            LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago AND cm.idEstudiante = p.idEstudiante
+            LEFT JOIN grupos g ON g.idGrupo = cm.idGrupo
+            WHERE p.idEstudiante = ?
+            ORDER BY p.Fecha_pago DESC LIMIT ?`,
             [idEstudiante, Number(limit)]
         );
         return rows;
@@ -91,13 +90,12 @@
 
     static async createPago({ idDeuda = null, idMetodos_pago = null, idCuenta_Destino = null, idEstudiante = null, Referencia = null, Mes_referencia = null, Monto_bs = null, Tasa_Pago = null, Monto_usd = null, Fecha_pago = null }) {
         
-        // Sanitize Mes_referencia if it's YYYY-MM to YYYY-MM-01 for DATE columns
+        // Sanitizar Mes_referencia si viene como YYYY-MM a YYYY-MM-01 para columnas DATE
         let mesRefFinal = Mes_referencia;
         if (mesRefFinal && /^\d{4}-\d{2}$/.test(mesRefFinal)) {
             mesRefFinal += '-01';
         }
 
-        // Helper to execute query and handle specific errors
         const tryInsert = async (query, params) => {
             try {
                 const [result] = await conn.promise().query(query, params);
@@ -107,7 +105,6 @@
             }
         };
 
-        // 1. Try Full Insert (with idDeuda and Mes_referencia)
         try {
             return await tryInsert(
                 'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Mes_referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -115,18 +112,14 @@
             );
         } catch (err) {
             const code = err.code;
-            // console.error('Full insert failed:', code, err.message);
 
-            // 2. If Mes_referencia causes issues (Bad Field or Wrong Value/Date)
             if (code === 'ER_BAD_FIELD_ERROR' || code === 'ER_TRUNCATED_WRONG_VALUE' || code === 'WARN_DATA_TRUNCATED') {
                 try {
-                    // Try without Mes_referencia but WITH idDeuda
                     return await tryInsert(
                         'INSERT INTO pagos (idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         [idDeuda, idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
                     );
                 } catch (err2) {
-                    // 3. If idDeuda causes issues (Bad Field or FK Constraint)
                     if (err2.code === 'ER_BAD_FIELD_ERROR' || err2.code === 'ER_NO_REFERENCED_ROW_2' || err2.code === 'ER_NO_REFERENCED_ROW') {
                         return await tryInsert(
                             'INSERT INTO pagos (idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -137,10 +130,8 @@
                 }
             }
             
-            // 4. If idDeuda causes issues (FK Constraint) directly on first try
             if (code === 'ER_NO_REFERENCED_ROW_2' || code === 'ER_NO_REFERENCED_ROW') {
-                 // Try without idDeuda (but keep Mes_referencia if it wasn't the issue, or drop it to be safe? Let's drop it to be safest)
-                 return await tryInsert(
+                return await tryInsert(
                     'INSERT INTO pagos (idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                     [idMetodos_pago, idCuenta_Destino, idEstudiante, Referencia, Monto_bs, Tasa_Pago, Monto_usd, Fecha_pago]
                 );
@@ -161,14 +152,15 @@
     static async getEstudiantes() {
         const [rows] = await conn.promise().query(
             `SELECT e.idEstudiante, e.Nombres, e.Apellidos, e.Cedula, e.Fecha_Nacimiento, e.Telefono, e.Correo, e.Direccion
-             FROM estudiantes e`);
+            FROM estudiantes e`
+        );
         return rows;
     }
 
     static async getEstudianteById(idEstudiante) {
         const [rows] = await conn.promise().query(
             `SELECT idEstudiante, Nombres, Apellidos, Cedula, Fecha_Nacimiento, Telefono, Correo, Direccion
-             FROM estudiantes WHERE idEstudiante = ?`, [idEstudiante]
+            FROM estudiantes WHERE idEstudiante = ?`, [idEstudiante]
         );
         return rows && rows.length ? rows[0] : null;
     }
@@ -177,11 +169,11 @@
         const [rows] = await conn.promise().query(
             `SELECT p.idPago, p.idDeuda, p.idMetodos_pago, p.Referencia, p.Monto_bs, p.Monto_usd, p.Fecha_pago,
                     cm.Mes_date AS Mes_control, cm.idGrupo AS idGrupo_control, g.Nombre_Grupo AS Grupo_nombre
-             FROM pagos p
-             LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago AND cm.idEstudiante = p.idEstudiante
-             LEFT JOIN grupos g ON g.idGrupo = cm.idGrupo
-             WHERE p.idEstudiante = ?
-             ORDER BY p.Fecha_pago DESC`, [idEstudiante]
+            FROM pagos p
+            LEFT JOIN control_mensualidades cm ON cm.idPago = p.idPago AND cm.idEstudiante = p.idEstudiante
+            LEFT JOIN grupos g ON g.idGrupo = cm.idGrupo
+            WHERE p.idEstudiante = ?
+            ORDER BY p.Fecha_pago DESC`, [idEstudiante]
         );
         return rows;
     }
@@ -190,11 +182,11 @@
         const [rows] = await conn.promise().query(
             `SELECT r.idRepresentante, r.Nombres, r.Apellidos, r.Cedula, r.Parentesco, r.Correo, r.Direccion,
                     GROUP_CONCAT(tr.Numero SEPARATOR ', ') AS Telefonos
-             FROM representantes r
-             JOIN representante_estudiante re ON re.idRepresentante = r.idRepresentante
-             LEFT JOIN telefonos_representante tr ON tr.idRepresentante = r.idRepresentante
-             WHERE re.idEstudiante = ?
-             GROUP BY r.idRepresentante`, [idEstudiante]
+            FROM representantes r
+            JOIN representante_estudiante re ON re.idRepresentante = r.idRepresentante
+            LEFT JOIN telefonos_representante tr ON tr.idRepresentante = r.idRepresentante
+            WHERE re.idEstudiante = ?
+            GROUP BY r.idRepresentante`, [idEstudiante]
         );
         return rows && rows.length ? rows[0] : null;
     }
@@ -202,11 +194,11 @@
     static async getGroupsByStudent(idEstudiante) {
         const [rows] = await conn.promise().query(
             `SELECT i.Fecha_inscripcion, i.idGrupo, g.Nombre_Grupo, g.idCurso, c.Nombre_Curso
-             FROM inscripciones i
-             LEFT JOIN grupos g ON g.idGrupo = i.idGrupo
-             LEFT JOIN cursos c ON c.idCurso = g.idCurso
-             WHERE i.idEstudiante = ?
-             ORDER BY i.Fecha_inscripcion DESC`, [idEstudiante]
+            FROM inscripciones i
+            LEFT JOIN grupos g ON g.idGrupo = i.idGrupo
+            LEFT JOIN cursos c ON c.idCurso = g.idCurso
+            WHERE i.idEstudiante = ?
+            ORDER BY i.Fecha_inscripcion DESC`, [idEstudiante]
         );
         return rows;
     }
@@ -215,17 +207,54 @@
         const [rows] = await conn.promise().query(
             `SELECT d.*, 
                     (COALESCE((SELECT SUM(p.Monto_usd) FROM pagos p WHERE p.idDeuda = d.idDeuda), 0) + 
-                     COALESCE((SELECT SUM(pp.Monto_parcial) FROM pagos_parciales pp WHERE pp.idDeuda = d.idDeuda), 0)) AS Total_Pagado
-             FROM deudas d
-             WHERE d.idEstudiante = ? AND d.Estado != 'Pagada'
-             ORDER BY d.Fecha_emision ASC`, 
+                    COALESCE((SELECT SUM(pp.Monto_parcial) FROM pagos_parciales pp WHERE pp.idDeuda = d.idDeuda), 0)) AS Total_Pagado
+            FROM deudas d
+            WHERE d.idEstudiante = ? AND d.Estado != 'Pagada'
+            ORDER BY d.Fecha_emision ASC`, 
             [idEstudiante]
         );
         return rows;
     }
 
+    // NUEVA FUNCIÓN PARA EL APARTADO DE DEUDORES
+// En src/models/Estudiante.js
+
+    static async getDeudores() {
+        const query = `
+            SELECT 
+                e.idEstudiante, 
+                e.Nombres, 
+                e.Apellidos, 
+                e.Telefono,
+                COUNT(d.idDeuda) as Cantidad_Deudas,
+                -- CAMBIO AQUÍ: Quitamos el HTML y dejamos solo texto plano '(Parcial)'
+                GROUP_CONCAT(
+                    CONCAT(
+                        d.Concepto, 
+                        IF(
+                            (SELECT COUNT(*) FROM pagos_parciales pp WHERE pp.idDeuda = d.idDeuda) > 0, 
+                            ' (Parcial)', 
+                            ''
+                        )
+                    ) 
+                SEPARATOR ', ') as Meses_Deuda,
+                SUM(d.Monto_usd) as Deuda_Original,
+                (
+                    SELECT COALESCE(SUM(pp.Monto_parcial), 0) 
+                    FROM pagos_parciales pp 
+                    WHERE pp.idDeuda IN (SELECT idDeuda FROM deudas WHERE idEstudiante = e.idEstudiante AND Estado != 'Pagada')
+                ) as Total_Abonado
+            FROM estudiantes e
+            JOIN deudas d ON e.idEstudiante = d.idEstudiante
+            WHERE d.Estado != 'Pagada'
+            GROUP BY e.idEstudiante, e.Nombres, e.Apellidos, e.Telefono
+        `;
+        const [rows] = await conn.promise().query(query);
+        return rows;
+    }
+
     static async getPaymentSummary(idEstudiante) {
-        // Calculate months dynamically based on current date
+        // Calcula fechas dinámicas
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         
@@ -241,43 +270,40 @@
                 SUM(p.Monto_usd) AS Total_Pagado_USD,
                 COUNT(*) AS Cantidad_Pagos,
                 (SELECT COALESCE(cm.Mes_date, p2.Fecha_pago)
-                 FROM pagos p2
-                 LEFT JOIN control_mensualidades cm ON cm.idPago = p2.idPago
-                 WHERE p2.idEstudiante = ? 
-                 ORDER BY p2.Fecha_pago DESC 
-                 LIMIT 1) AS Ultimo_Mes,
-                -- Pago mes pasado
+                FROM pagos p2
+                LEFT JOIN control_mensualidades cm ON cm.idPago = p2.idPago
+                WHERE p2.idEstudiante = ? 
+                ORDER BY p2.Fecha_pago DESC 
+                LIMIT 1) AS Ultimo_Mes,
                 (SELECT SUM(p3.Monto_usd)
-                 FROM pagos p3
-                 LEFT JOIN control_mensualidades cm3 ON cm3.idPago = p3.idPago
-                 WHERE p3.idEstudiante = ?
-                 AND (DATE_FORMAT(cm3.Mes_date, '%Y-%m') = ? 
-                      OR (cm3.Mes_date IS NULL AND DATE_FORMAT(p3.Fecha_pago, '%Y-%m') = ?))
+                FROM pagos p3
+                LEFT JOIN control_mensualidades cm3 ON cm3.idPago = p3.idPago
+                WHERE p3.idEstudiante = ?
+                AND (DATE_FORMAT(cm3.Mes_date, '%Y-%m') = ? 
+                    OR (cm3.Mes_date IS NULL AND DATE_FORMAT(p3.Fecha_pago, '%Y-%m') = ?))
                 ) AS Pago_Mes_Pasado,
-                -- Pago mes actual
                 (SELECT SUM(p4.Monto_usd)
-                 FROM pagos p4
-                 LEFT JOIN control_mensualidades cm4 ON cm4.idPago = p4.idPago
-                 WHERE p4.idEstudiante = ?
-                 AND (DATE_FORMAT(cm4.Mes_date, '%Y-%m') = ? 
-                      OR (cm4.Mes_date IS NULL AND DATE_FORMAT(p4.Fecha_pago, '%Y-%m') = ?))
+                FROM pagos p4
+                LEFT JOIN control_mensualidades cm4 ON cm4.idPago = p4.idPago
+                WHERE p4.idEstudiante = ?
+                AND (DATE_FORMAT(cm4.Mes_date, '%Y-%m') = ? 
+                    OR (cm4.Mes_date IS NULL AND DATE_FORMAT(p4.Fecha_pago, '%Y-%m') = ?))
                 ) AS Pago_Mes_Actual,
-                -- Pago mes próximo
                 (SELECT SUM(p5.Monto_usd)
-                 FROM pagos p5
-                 LEFT JOIN control_mensualidades cm5 ON cm5.idPago = p5.idPago
-                 WHERE p5.idEstudiante = ?
-                 AND (DATE_FORMAT(cm5.Mes_date, '%Y-%m') = ? 
-                      OR (cm5.Mes_date IS NULL AND DATE_FORMAT(p5.Fecha_pago, '%Y-%m') = ?))
+                FROM pagos p5
+                LEFT JOIN control_mensualidades cm5 ON cm5.idPago = p5.idPago
+                WHERE p5.idEstudiante = ?
+                AND (DATE_FORMAT(cm5.Mes_date, '%Y-%m') = ? 
+                    OR (cm5.Mes_date IS NULL AND DATE_FORMAT(p5.Fecha_pago, '%Y-%m') = ?))
                 ) AS Pago_Mes_Proximo
-             FROM pagos p
-             WHERE p.idEstudiante = ?`,
+            FROM pagos p
+            WHERE p.idEstudiante = ?`,
             [
-                idEstudiante, // Ultimo_Mes
-                idEstudiante, lastMonth, lastMonth, // Mes pasado
-                idEstudiante, currentMonth, currentMonth, // Mes actual
-                idEstudiante, nextMonth, nextMonth, // Mes próximo
-                idEstudiante // WHERE principal
+                idEstudiante, 
+                idEstudiante, lastMonth, lastMonth, 
+                idEstudiante, currentMonth, currentMonth, 
+                idEstudiante, nextMonth, nextMonth, 
+                idEstudiante
             ]
         );
         
@@ -291,7 +317,6 @@
             Pago_Mes_Proximo: null
         };
         
-        // Add month names for frontend display
         result.Nombre_Mes_Pasado = lastMonth;
         result.Nombre_Mes_Actual = currentMonth;
         result.Nombre_Mes_Proximo = nextMonth;

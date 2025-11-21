@@ -18,7 +18,7 @@
                 <ul>
                     <li><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
                     <li><a href="#" id="view-students-btn">Estudiantes</a></li>
-                    <li><a href="#" id="view-cursos-btn">Cursos</a></li>
+                    <li class="active"><a href="#" id="view-cursos-btn">Cursos</a></li> <li><a href="#" id="view-deudores-btn">Deudores</a></li>
                     <li class="logout-container"><button id="logout-btn" class="logout-btn" title="Cerrar sesión"><img src="../../public/MiLogOut.png" alt="Salir"/></button></li>
                 </ul>
             </nav>
@@ -32,13 +32,11 @@
             </div>
 
             <div id="cursos-grouped" style="margin-top: 16px;">
-                <!-- Se llenará dinámicamente con los cursos y sus grupos -->
                 <p>Cargando cursos...</p>
             </div>
         </main>
     </div>
 
-    <!-- Modal para Crear Curso / Grupo (tabs) -->
     <div id="curso-grupo-modal" class="modal" style="display:none;">
         <div class="modal-content large">
             <span class="close-button" id="close-curso-grupo">&times;</span>

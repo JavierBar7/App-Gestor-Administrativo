@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deudores - Just Talk Academy</title>
+    <link rel="stylesheet" href="../../public/gestion.css">
+    <style>
+        /* Estilos específicos para Deudores */
+        .debt-amount { color: #e74c3c; font-weight: bold; font-size: 1.1em; }
+        .btn-pay { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-pay:hover { background-color: #218838; transform: translateY(-1px); }
+        
+        /* Estilo para el nombre clicable */
+        .clickable-name {
+            color: #0056b3;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .clickable-name:hover { color: #003d82; }
+
+        /* Estilo para el botón de ver detalles */
+        .view-debt-details {
+            background: none;
+            border: 1px solid #ccc;
+            color: #555;
+            padding: 4px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        .view-debt-details:hover {
+            background: #f0f0f0;
+            border-color: #999;
+            color: #333;
+        }
+
+        /* Alineación de la tabla principal */
+        /* La segunda columna (Información de la deuda) centrada encabezado y contenido */
+        #deudores-table-body tr td:nth-child(2), 
+        .user-table-container thead tr th:nth-child(2) {
+            text-align: center; 
+        }
+
+        .modal-content.large { max-width: 800px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="Logo Just Talk Academy" class="sidebar-logo">
+                <h2>Just Talk</h2>
+                <h2>Academy</h2>
+            </div>
+            <nav class="nav-menu">
+                <ul>
+                    <li><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
+                    <li><a href="#" id="view-students-btn">Estudiantes</a></li>
+                    <li><a href="#" id="view-cursos-btn">Cursos</a></li>
+                    <li class="active"><a href="#" id="view-deudores-btn">Deudores</a></li>
+                    <li class="logout-container"><button id="logout-btn" class="logout-btn" title="Cerrar sesión"><img src="../../public/MiLogOut.png" alt="Salir"/></button></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content-area">
+            <h1>Control de Deudores</h1>
+            
+            <div class="user-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">Estudiante</th>
+                            <th>Información de la deuda</th>
+                            <th style="text-align: left;">Total Deuda ($)</th>
+                            <th style="text-align: left;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deudores-table-body">
+                        <tr><td colspan="4" style="text-align:center">Cargando...</td></tr>
+                    </tbody>
+                </table>
+                <p id="no-data-msg" class="info-message" style="display: none;">¡Excelente! No hay estudiantes morosos actualmente.</p>
+            </div>
+        </main>
+    </div>
+
+    <div id="student-details-modal" class="modal" style="display:none;">
+        <div class="modal-content large">
+            <span class="close-button" id="close-student-details">&times;</span>
+            <h2 id="details-title">Detalle del Estudiante</h2>
+            <div id="details-body">
+                <section>
+                    <h3>Datos personales</h3>
+                    <div style="display:flex; gap:24px; align-items:flex-start;">
+                        <div style="flex:1; min-width:200px;">
+                            <div style="margin-bottom:8px;"><strong>Nombre:</strong> <span id="det-nombre"></span></div>
+                            <div style="margin-bottom:8px;"><strong>Cédula:</strong> <span id="det-cedula"></span></div>
+                            <div style="margin-bottom:8px;"><strong>Fecha de Nacimiento:</strong> <span id="det-fecha-nac"></span></div>
+                        </div>
+                        <div style="flex:1; min-width:200px;">
+                            <div style="margin-bottom:8px;"><strong>Teléfono:</strong> <span id="det-telefono"></span></div>
+                            <div style="margin-bottom:8px;"><strong>Correo:</strong> <span id="det-correo"></span></div>
+                            <div style="margin-bottom:8px;"><strong>Dirección:</strong> <span id="det-direccion"></span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Representante</h3>
+                    <div id="det-representante">No posee representante registrado.</div>
+                </section>
+
+                <section id="section-conceptos-deuda" style="display:none; background:#fff0f0; padding:10px; border-radius:8px; border:1px solid #ffcccc; margin-top:15px;">
+                    <h3 style="color:#c0392b; margin-top:0;">Conceptos Pendientes</h3>
+                    <p id="det-conceptos-lista" style="margin:0; line-height:1.5;"></p>
+                </section>
+
+                <section>
+                    <h3>Historial de Pagos</h3>
+                    <table id="det-pagos-table" style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f9f9f9;">
+                                <th style="padding:8px; border-bottom:1px solid #ddd; text-align: left;">Fecha</th>
+                                <th style="padding:8px; border-bottom:1px solid #ddd; text-align: left;">Concepto</th>
+                                <th style="padding:8px; border-bottom:1px solid #ddd; text-align: left;">Referencia</th>
+                                <th style="padding:8px; border-bottom:1px solid #ddd; text-align: left;">Monto ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../public/js/menu.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const tableBody = document.getElementById('deudores-table-body');
+            const noDataMsg = document.getElementById('no-data-msg');
+            
+            // Configuración del Modal
+            const modal = document.getElementById('student-details-modal');
+            const closeBtn = document.getElementById('close-student-details');
+
+            if(closeBtn) {
+                closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+            }
+            
+            // Cerrar modal al hacer clic fuera
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+
+            // Cargar lista de deudores
+            try {
+                const res = await fetch('http://localhost:3000/api/estudiantes/listado/morosos');
+                const data = await res.json();
+
+                tableBody.innerHTML = '';
+
+                if (data.success && data.deudores.length > 0) {
+                    noDataMsg.style.display = 'none';
+                    
+                    data.deudores.forEach(d => {
+                        const row = document.createElement('tr');
+                        
+                        // Preparamos la lista de conceptos (separados por <br>) para enviarla al modal
+                        const conceptosRaw = d.Meses_Deuda || 'Sin detalles';
+                        const conceptosHtml = conceptosRaw.split(', ').map(c => `• ${c}`).join('<br>');
+
+                        // IMPORTANTE: Escapamos comillas simples para que el onclick no falle
+                        const safeConceptos = conceptosHtml.replace(/'/g, "\\'");
+
+                        row.innerHTML = `
+                            <td class="clickable-name" onclick="verDetalles(${d.idEstudiante}, '${safeConceptos}')">
+                                ${d.Nombres} ${d.Apellidos}
+                            </td>
+                            <td>
+                                <button class="view-debt-details" onclick="verDetalles(${d.idEstudiante}, '${safeConceptos}')">
+                                    Ver Conceptos (${d.Cantidad_Deudas})
+                                </button>
+                            </td>
+                            <td class="debt-amount">$${d.Deuda_Total}</td>
+                            <td>
+                                <button class="btn-pay" onclick="irAPagar(${d.idEstudiante})">Registrar Pago</button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                } else {
+                    noDataMsg.style.display = 'block';
+                }
+            } catch (error) {
+                console.error(error);
+                tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error al cargar datos</td></tr>';
+            }
+        });
+
+        function irAPagar(id) {
+            window.location.href = `registrar_pago.html?studentId=${id}`;
+        }
+
+        // Función para abrir el modal y cargar detalles
+        async function verDetalles(id, conceptosHtml) {
+            try {
+                const res = await fetch(`http://localhost:3000/api/estudiantes/${id}`);
+                const data = await res.json();
+
+                if (!data.success) {
+                    alert('Error al cargar detalles');
+                    return;
+                }
+
+                const est = data.estudiante;
+                const rep = data.representante;
+
+                // Llenar Datos Personales
+                document.getElementById('det-nombre').textContent = `${est.Nombres} ${est.Apellidos}`;
+                document.getElementById('det-cedula').textContent = est.Cedula || 'N/A';
+                let fechaNac = est.Fecha_Nacimiento ? new Date(est.Fecha_Nacimiento).toISOString().split('T')[0] : 'N/A';
+                document.getElementById('det-fecha-nac').textContent = fechaNac;
+                document.getElementById('det-telefono').textContent = est.Telefono || 'N/A';
+                document.getElementById('det-correo').textContent = est.Correo || 'N/A';
+                document.getElementById('det-direccion').textContent = est.Direccion || 'N/A';
+
+                // Llenar Datos del Representante
+                const repContainer = document.getElementById('det-representante');
+                if (rep) {
+                    repContainer.innerHTML = `
+                        <div style="background:#f9f9f9; padding:10px; border-radius:6px; border:1px solid #eee;">
+                            <strong>${rep.Nombres} ${rep.Apellidos}</strong> (${rep.Parentesco})<br>
+                            Cédula: ${rep.Cedula}<br>
+                            Teléfonos: ${rep.Telefonos || 'N/A'}<br>
+                            Correo: ${rep.Correo || 'N/A'}
+                        </div>
+                    `;
+                } else {
+                    repContainer.innerHTML = '<span style="color:#888; font-style:italic;">No requiere / No registrado</span>';
+                }
+
+                // Llenar Conceptos Pendientes (con estilo para "Parcial")
+                const deudaSection = document.getElementById('section-conceptos-deuda');
+                const listaConceptos = document.getElementById('det-conceptos-lista');
+                
+                if (conceptosHtml) {
+                    deudaSection.style.display = 'block';
+                    // Detectamos la palabra "(Parcial)" y le ponemos color
+                    const htmlConEstilo = conceptosHtml.replace(
+                        /\(Parcial\)/g, 
+                        '<span style="color:#d35400; font-weight:bold;">(Parcial)</span>'
+                    );
+                    listaConceptos.innerHTML = htmlConEstilo;
+                } else {
+                    deudaSection.style.display = 'none';
+                }
+
+                // Llenar Tabla de Historial de Pagos
+                const pagosTable = document.querySelector('#det-pagos-table tbody');
+                pagosTable.innerHTML = '';
+                
+                if (data.pagos && data.pagos.length > 0) {
+                    // Mostramos los últimos 5 pagos
+                    data.pagos.slice(0, 5).forEach(p => {
+                        const fechaPago = new Date(p.Fecha_pago).toLocaleDateString();
+                        
+                        // Nombre del concepto base
+                        let conceptoDisplay = p.Concepto_Pagado || 'Abono / Otro';
+
+                        // Si es un pago parcial, le agregamos la etiqueta con el monto
+                        if (p.Es_Parcial > 0) {
+                            conceptoDisplay += ` <span style="color:#d35400; font-weight:bold; font-size:0.9em;">(Parcial $${Number(p.Monto_usd).toFixed(2)})</span>`;
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${fechaPago}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${conceptoDisplay}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${p.Referencia || 'N/A'}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">$${p.Monto_usd}</td>
+                        `;
+                        pagosTable.appendChild(tr);
+                    });
+                } else {
+                    pagosTable.innerHTML = '<tr><td colspan="4" style="padding:10px; text-align:center; color:#777;">No hay pagos registrados</td></tr>';
+                }
+
+                // Mostrar el modal
+                document.getElementById('student-details-modal').style.display = 'flex';
+
+            } catch (err) {
+                console.error(err);
+                alert('Error de conexión al obtener detalles');
+            }
+        }
+    </script>
+</body>
+</html>

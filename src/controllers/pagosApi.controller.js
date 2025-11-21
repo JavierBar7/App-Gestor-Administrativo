@@ -6,8 +6,9 @@ exports.createPayment = async (req, res) => {
     try {
         const payload = req.body;
         const idEstudiante = payload.idEstudiante;
-        const metodoId = payload.metodoId;
-        // fetch payment method info to apply validation rules
+        const metodoId = Number(payload.metodoId); // Asegurar que es número
+
+        // Fetch payment method info to apply validation rules
         let metodoRow = null;
         try {
             const [rows] = await conn.promise().query('SELECT idMetodos_pago, Nombre, Tipo_Validacion FROM metodos_pagos WHERE idMetodos_pago = ?', [metodoId]);
@@ -15,6 +16,7 @@ exports.createPayment = async (req, res) => {
         } catch (mErr) {
             console.warn('No se pudo obtener metodos_pagos para validación:', mErr && mErr.message ? mErr.message : mErr);
         }
+        
         const referencia = payload.referencia || null;
         const idDeuda = payload.idDeuda || null;
         const monto = Number(payload.monto || 0);
@@ -39,6 +41,17 @@ exports.createPayment = async (req, res) => {
             }
         }
 
+        // --- LÓGICA DE CUENTA DESTINO ---
+        // 1: Transferencia, 2: Pago Móvil -> Cuenta Débito (ID 2)
+        // 3: Efectivo, 4: Cash -> Caja Chica (ID 1)
+        let idCuentaAuto = 1; 
+        if (metodoId === 1 || metodoId === 2) {
+            idCuentaAuto = 2;
+        }
+        // Usamos la que venga del front o la automática
+        const idCuentaFinal = payload.idCuenta_Destino || idCuentaAuto;
+
+
         const tasaActual = await Estudiante.getLatestTasa();
         let Monto_bs = null;
         let Monto_usd = null;
@@ -60,9 +73,9 @@ exports.createPayment = async (req, res) => {
         const idPago = await Estudiante.createPago({
             idDeuda: idDeuda || null,
             idMetodos_pago: metodoId,
-            idCuenta_Destino: payload.idCuenta_Destino || null,
+            idCuenta_Destino: idCuentaFinal, // <--- Aquí aplicamos la cuenta corregida
             idEstudiante,
-            Referencia: referencia,
+            Referencia: referencia || 'Pendiente', // Evitamos NULL en referencia
             Mes_referencia: payload.Mes_referencia || null,
             Monto_bs,
             Tasa_Pago,
@@ -78,37 +91,21 @@ exports.createPayment = async (req, res) => {
             console.log('Control Mensualidades - mesRef:', mesRef, 'idGrupo:', idGrupoControl);
             
             if (mesRef) {
-                // Insert using STR_TO_DATE to accept 'YYYY-MM' from frontend (input[type=month])
-                // Note: control_mensualidades uses Mes_date column, not Mes
-                console.log('Inserting control_mensualidades with month:', mesRef);
                 const [result] = await conn.promise().query(
                     `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes_date, idGrupo)
                      VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
                     [idEstudiante, idPago, mesRef, idGrupoControl]
                 );
-                console.log('Control mensualidades inserted successfully, ID:', result.insertId);
             } else if (idGrupoControl) {
-                // If only group provided, insert with current month
-                const todayMonth = new Date().toISOString().slice(0,7); // 'YYYY-MM'
-                console.log('Inserting control_mensualidades with current month:', todayMonth);
+                const todayMonth = new Date().toISOString().slice(0,7);
                 const [result] = await conn.promise().query(
                     `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes_date, idGrupo)
                      VALUES (?, ?, STR_TO_DATE(?, '%Y-%m'), ?)`,
                     [idEstudiante, idPago, todayMonth, idGrupoControl]
                 );
-                console.log('Control mensualidades inserted successfully, ID:', result.insertId);
-            } else {
-                console.log('No month or group provided, skipping control_mensualidades insertion');
-            }
+            } 
         } catch (cmErr) {
-            // Don't fail the payment if control insertion fails; log for debugging
             console.error('ERROR inserting control_mensualidades:', cmErr);
-            console.error('Error details:', {
-                message: cmErr.message,
-                code: cmErr.code,
-                sqlMessage: cmErr.sqlMessage,
-                sql: cmErr.sql
-            });
         }
 
         // parciales: array of { monto, idDeuda? }
