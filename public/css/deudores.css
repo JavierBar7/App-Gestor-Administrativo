@@ -1,0 +1,39 @@
+    /* Estilos específicos para Deudores */
+        .debt-amount { color: #e74c3c; font-weight: bold; font-size: 1.1em; }
+        .btn-pay { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-pay:hover { background-color: #218838; transform: translateY(-1px); }
+        
+        /* Estilo para el nombre clicable */
+        .clickable-name {
+            color: #0056b3;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .clickable-name:hover { color: #003d82; }
+
+        /* Estilo para el botón de ver detalles */
+        .view-debt-details {
+            background: none;
+            border: 1px solid #ccc;
+            color: #555;
+            padding: 4px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        .view-debt-details:hover {
+            background: #f0f0f0;
+            border-color: #999;
+            color: #333;
+        }
+
+        /* Alineación de la tabla principal */
+        /* La segunda columna (Información de la deuda) centrada encabezado y contenido */
+        #deudores-table-body tr td:nth-child(2), 
+        .user-table-container thead tr th:nth-child(2) {
+            text-align: center; 
+        }
+
+        .modal-content.large { max-width: 800px; }

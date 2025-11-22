@@ -22,4 +22,8 @@ router.put('/:id', estudianteController.updateEstudiante);
 // Crea estudiante
 router.post('/', estudianteController.createEstudiante);
 
+// Payment request routes
+router.post('/:id/solicitudes', estudianteController.createSolicitudPago);
+router.get('/:id/solicitudes', estudianteController.getSolicitudesPago);
+
 module.exports = router;

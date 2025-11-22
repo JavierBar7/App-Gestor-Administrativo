@@ -1,5 +1,6 @@
 const { Estudiante } = require('../models/Estudiante');
 const { Grupo } = require('../models/Grupo');
+const { SolicitudPago } = require('../models/SolicitudPago');
 const conn = require('../../config/database');
 
 // Helper para calcular edad
@@ -153,5 +154,44 @@ exports.getListadoDeudores = async (req, res) => {
     } catch (error) {
         console.error('Error obteniendo listado de morosos:', error);
         return res.status(500).json({ success: false, message: 'Error al obtener listado de morosos' });
+    }
+};
+
+// Create payment request for a student
+exports.createSolicitudPago = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { Tipo_Solicitud, Fecha_Solicitud, Notas } = req.body;
+
+        if (!Tipo_Solicitud || !Fecha_Solicitud) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Tipo_Solicitud y Fecha_Solicitud son requeridos' 
+            });
+        }
+
+        const idSolicitud = await SolicitudPago.createSolicitud({
+            idEstudiante: id,
+            Tipo_Solicitud,
+            Fecha_Solicitud,
+            Notas
+        });
+
+        return res.json({ success: true, idSolicitud });
+    } catch (error) {
+        console.error('Error creando solicitud de pago:', error);
+        return res.status(500).json({ success: false, message: 'Error al crear solicitud de pago' });
+    }
+};
+
+// Get payment requests for a student
+exports.getSolicitudesPago = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const solicitudes = await SolicitudPago.getSolicitudesByEstudiante(id);
+        return res.json({ success: true, solicitudes });
+    } catch (error) {
+        console.error('Error obteniendo solicitudes:', error);
+        return res.status(500).json({ success: false, message: 'Error al obtener solicitudes' });
     }
 };
