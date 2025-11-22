@@ -156,7 +156,6 @@ exports.createPayment = async (req, res) => {
             code: err.code
         });
     }
-    }
 };
 
 exports.checkReference = async (req, res) => {

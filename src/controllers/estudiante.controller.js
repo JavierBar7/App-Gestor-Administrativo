@@ -58,8 +58,6 @@ exports.getEstudianteDetails = async (req, res) => {
 };
 
 exports.createEstudiante = async (req, res) => {
-    // ... (Mismo código de creación que ya tienes, omitido por brevedad para enfocar en getDeudas)
-    // Si necesitas este bloque completo, avísame, pero es el mismo que ya funcionaba.
     try {
         const payload = req.body;
         const estudianteData = {
@@ -93,13 +91,6 @@ exports.createEstudiante = async (req, res) => {
             }
         }
 
-        // Pago inicial
-        if (payload.pago && payload.pago.monto) {
-             // Lógica de pago inicial... (se mantiene igual al anterior)
-             // Para no hacer el archivo gigante, asumo que mantienes tu lógica de createEstudiante
-             // Si la perdiste, dímelo y la pego completa.
-        }
-
         return res.json({ success: true, idEstudiante });
     } catch (error) {
         console.error(error);
@@ -107,80 +98,12 @@ exports.createEstudiante = async (req, res) => {
     }
 };
 
-// --- AQUÍ ESTÁ LA CORRECCIÓN IMPORTANTE ---
+// USANDO LÓGICA UNIFICADA CON PERÍODO DE GRACIA
 exports.getDeudas = async (req, res) => {
     try {
         const id = req.params.id;
-
-        // 1. Fecha Inscripción
-        const [est] = await conn.promise().query(
-            'SELECT Fecha_inscripcion FROM inscripciones WHERE idEstudiante = ? ORDER BY Fecha_inscripcion ASC LIMIT 1',
-            [id]
-        );
-
-        // 2. Deudas Reales (BD)
-        const deudasRegistradas = await Estudiante.getDeudasByStudent(id);
-
-        // 3. Calcular Virtuales
-        let deudasVirtuales = [];
-        if (est && est.length > 0) {
-            // Forzar mediodía para evitar problemas de zona horaria
-            const fechaStr = new Date(est[0].Fecha_inscripcion).toISOString().slice(0, 10);
-            const fechaInicio = new Date(fechaStr + 'T12:00:00'); 
-            const fechaActual = new Date();
-            const costoMensualidad = 30.00;
-
-            let iterador = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1, 12, 0, 0);
-            
-            while (iterador <= fechaActual) {
-                const yearCheck = iterador.getFullYear();
-                const mesCheck = iterador.getMonth() + 1;
-                // Clave única de mes: "2025-10"
-                const mesClave = `${yearCheck}-${String(mesCheck).padStart(2, '0')}`;
-
-                // a. Verificar si está pagado (control_mensualidades)
-                const [pagado] = await conn.promise().query(
-                    `SELECT idControl FROM control_mensualidades 
-                     WHERE idEstudiante = ? AND (
-                        (Mes = ? AND Year = ?) OR DATE_FORMAT(Mes_date, '%Y-%m') = ?
-                     )`,
-                    [id, mesCheck, yearCheck, mesClave]
-                );
-
-                // b. CORRECCIÓN DUPLICADOS: Buscar si ya existe una deuda física con esa FECHA (ignorando nombre)
-                const deudaFisicaExiste = deudasRegistradas.find(d => {
-                    if (!d.Fecha_emision) return false;
-                    const f = new Date(d.Fecha_emision);
-                    // Construimos la clave del mes de la deuda física
-                    const fClave = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}`;
-                    return fClave === mesClave;
-                });
-
-                // Solo crear virtual si NO está pagado Y NO existe física
-                if ((!pagado || pagado.length === 0) && !deudaFisicaExiste) {
-                    const nombreMes = iterador.toLocaleString('es-ES', { month: 'long' });
-                    const mesCapitalizado = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
-                    
-                    deudasVirtuales.push({
-                        idDeuda: `virtual_${mesClave}`,
-                        Concepto: `Mensualidad ${mesCapitalizado}`, // SIN AÑO
-                        Monto_usd: costoMensualidad.toFixed(4),
-                        Total_Pagado: 0,
-                        Fecha_emision: new Date(iterador),
-                        Estado: 'Pendiente (Automática)',
-                        esVirtual: true,
-                        mesRef: mesClave
-                    });
-                }
-                iterador.setMonth(iterador.getMonth() + 1);
-            }
-        }
-
-        const todasLasDeudas = [...deudasRegistradas, ...deudasVirtuales];
-        todasLasDeudas.sort((a, b) => new Date(a.Fecha_emision) - new Date(b.Fecha_emision));
-
+        const todasLasDeudas = await Estudiante.getDebtsForStudent(id, null);
         return res.json({ success: true, deudas: todasLasDeudas });
-
     } catch (error) {
         console.error('Error obteniendo deudas:', error);
         return res.status(500).json({ success: false, message: 'Error al obtener deudas' });
@@ -188,14 +111,47 @@ exports.getDeudas = async (req, res) => {
 };
 
 exports.getListadoDeudores = async (req, res) => {
-    // ... (Tu código existente de listado de morosos) ...
-    // Si necesitas este bloque, avísame para pegarlo también.
-    // Por defecto asumo que solo querías arreglar getDeudas en este archivo.
     try {
-        // Lógica simplificada para no borrar tu código si lo tenías:
-        // Esta función llama a una consulta compleja de SQL usualmente.
-        // Si no la tienes a mano, usa la versión anterior.
-        const deudores = await Estudiante.getDeudores ? await Estudiante.getDeudores() : []; 
-        return res.json({ success: true, deudores });
-    } catch (e) { return res.json({success:false, deudores:[]}); }
+        const estudiantes = await Estudiante.getEstudiantes();
+        const morosos = [];
+
+        for (const est of estudiantes) {
+            const deudas = await Estudiante.getDebtsForStudent(est.idEstudiante, null);
+            
+            const deudasPendientes = deudas.filter(d => {
+                const monto = Number(d.Monto_usd);
+                const pagado = Number(d.Total_Pagado || 0);
+                return (monto - pagado) > 0.01;
+            });
+
+            if (deudasPendientes.length > 0) {
+                const totalDeuda = deudasPendientes.reduce((acc, d) => {
+                    const monto = Number(d.Monto_usd);
+                    const pagado = Number(d.Total_Pagado || 0);
+                    return acc + (monto - pagado);
+                }, 0);
+
+                const conceptos = deudasPendientes.map(d => {
+                    const monto = Number(d.Monto_usd);
+                    const pagado = Number(d.Total_Pagado || 0);
+                    const esParcial = pagado > 0 && pagado < monto;
+                    return d.Concepto + (esParcial ? ' (Parcial)' : '');
+                }).join(', ');
+
+                morosos.push({
+                    idEstudiante: est.idEstudiante,
+                    Nombres: est.Nombres,
+                    Apellidos: est.Apellidos,
+                    Deuda_Total: totalDeuda.toFixed(2),
+                    Cantidad_Deudas: deudasPendientes.length,
+                    Meses_Deuda: conceptos
+                });
+            }
+        }
+
+        return res.json({ success: true, deudores: morosos });
+    } catch (error) {
+        console.error('Error obteniendo listado de morosos:', error);
+        return res.status(500).json({ success: false, message: 'Error al obtener listado de morosos' });
+    }
 };
