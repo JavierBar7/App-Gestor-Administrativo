@@ -65,6 +65,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         return mesVal || '';
     }
 
+    // Función robusta para formatear moneda
+    function formatMoney(amount, currency) {
+        const num = Number(amount);
+        if (isNaN(num)) return '0.00';
+
+        if (currency === 'USD') {
+            // Si es entero (ej: 30.00), mostrar 30. Si tiene decimales (30.50), mostrar 30.50
+            return num % 1 === 0 ? num.toString() : num.toFixed(2);
+        } else {
+            // Bs siempre con 2 decimales
+            return num.toFixed(2);
+        }
+    }
+
     // --- LÓGICA DE GRUPOS (AUTOCOMPLETADO) ---
     function renderSelectedGrupos() {
         const selectedContainer = document.getElementById('ins-selected-grupos');
@@ -96,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (selectedGrupos.find(x => String(x) === String(id))) return; 
         selectedGrupos.push(id);
         const sel = document.getElementById('ins-idGrupo'); 
-        if (sel) sel.value = id; // Actualizar select oculto por compatibilidad
+        if (sel) sel.value = id; 
         renderSelectedGrupos();
     }
 
@@ -134,8 +148,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             li.textContent = `${g.Nombre_Grupo} ${g.Nombre_Curso ? ' — ' + g.Nombre_Curso : ''}`;
             li.addEventListener('click', () => {
                 addSelectedGrupo(g.idGrupo);
-                if (acInput) acInput.value = ''; // Limpiar input
-                renderSuggestions([]); // Cerrar sugerencias
+                if (acInput) acInput.value = ''; 
+                renderSuggestions([]); 
             });
             ul.appendChild(li);
         });
@@ -165,7 +179,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const q = (e.target.value || '').trim().toLowerCase();
                     if (!q) { renderSuggestions([]); return; }
                     const matches = gruposCache.filter(g => (g.Nombre_Grupo || '').toLowerCase().includes(q) || (g.Nombre_Curso || '').toLowerCase().includes(q));
-                    // Filtrar los ya seleccionados
                     const filtered = matches.filter(m => !selectedGrupos.find(x => String(x) === String(m.idGrupo))).slice(0, 20);
                     renderSuggestions(filtered);
                 });
@@ -204,25 +217,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (s.lastPayment) {
                             const p = s.lastPayment;
                             const metodo = p.Metodo || 'Pago';
-                            const monto = p.Monto_usd ? `${p.Monto_usd}` : (p.Monto_bs ? `Bs.${p.Monto_bs}` : '');
+                            const monto = formatMoney(p.Monto_usd, 'USD'); // Usando nueva función
                             const mes = formatMes(p.Mes_Pagado, p.Fecha_pago);
                             const mesStr = mes ? `(${mes})` : '';
-                            lastPayDisplay = `<strong>${metodo}:</strong> ${monto} <small>${mesStr}</small>`;
+                            lastPayDisplay = `<strong>${metodo}:</strong> $${monto} <small>${mesStr}</small>`;
                         }
 
                         // Deuda
-                        let debtDisplay = '<span style="color:red; font-weight:bold;">Deuda</span>';
-                        if (s.pendingDebt === 0 || s.pendingDebt === '0') {
-                            debtDisplay = '<span style="color:green;">Solvente</span>';
-                        } else if (s.pendingDebt && !isNaN(Number(s.pendingDebt)) && Number(s.pendingDebt) > 0) {
-                            debtDisplay = `<span style="color:red; font-weight:bold;">${Number(s.pendingDebt).toFixed(2)}</span>`;
+                        let debtDisplay = '<span class="badge-status badge-deuda">Deuda</span>';
+                        const deudaTotal = Number(s.pendingDebt);
+                        if (deudaTotal <= 0.01) {
+                            debtDisplay = '<span class="badge-status badge-solvente">Solvente</span>';
+                        } else {
+                            debtDisplay = '<span class="badge-status badge-deuda">Deuda</span>';
                         }
 
                         tr.innerHTML = `
                             <td class="student-name" data-id="${s.idEstudiante}" style="cursor:pointer;color:blue;text-decoration:underline;">${s.Nombres || ''} ${s.Apellidos || ''}</td>
                             <td>${edadDisplay}</td>
                             <td>${lastPayDisplay}</td>
-                            <td>${debtDisplay}</td>
+                            <td style="text-align:center;">${debtDisplay}</td>
                             <td>
                                 <button class="edit-student" data-id="${s.idEstudiante}">Editar</button>
                                 <button class="register-payment" data-id="${s.idEstudiante}" style="margin-left:8px;">Registrar Pago</button>
@@ -261,6 +275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (err) { console.error(err); }
     }
 
+    // --- MODAL DETALLES MODERNO ---
     async function openStudentDetails(id) {
         try {
             const res = await fetch(`http://localhost:3000/api/estudiantes/${id}`);
@@ -268,61 +283,116 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!data || !data.success) return alert('Error al cargar detalles');
             
             const est = data.estudiante;
-            document.getElementById('det-nombre').textContent = `${est.Nombres} ${est.Apellidos}`;
-            document.getElementById('det-cedula').textContent = est.Cedula || '';
-            document.getElementById('det-fecha-nac').textContent = est.Fecha_Nacimiento ? new Date(est.Fecha_Nacimiento).toISOString().slice(0, 10) : '';
-            document.getElementById('det-telefono').textContent = est.Telefono || '';
-            document.getElementById('det-correo').textContent = est.Correo || '';
-            document.getElementById('det-direccion').textContent = est.Direccion || '';
 
-            const repEl = document.getElementById('det-representante');
+            // --- 1. INYECTAR HTML MODERNO EN EL CUERPO DEL MODAL ---
+            const detailsBody = document.getElementById('details-body');
+            
+            let fechaNac = est.Fecha_Nacimiento ? new Date(est.Fecha_Nacimiento).toISOString().slice(0, 10) : 'N/A';
+            
+            // Construcción del HTML del Representante
+            let repHtml = '<span style="color:#888; font-style:italic;">No posee representante registrado.</span>';
             if (data.representante) {
                 const r = data.representante;
-                repEl.innerHTML = `<p>${r.Nombres} ${r.Apellidos} — ${r.Parentesco || ''}</p><p>Cédula: ${r.Cedula || ''}</p><p>Teléfonos: ${r.Telefonos || ''}</p><p>Correo: ${r.Correo || ''}</p><p>Dirección: ${r.Direccion || ''}</p>`;
-            } else { repEl.textContent = 'No posee representante registrado.'; }
+                repHtml = `
+                    <div class="info-grid">
+                        <div class="info-item"><span class="info-label">Nombre</span><span class="info-value">${r.Nombres} ${r.Apellidos}</span></div>
+                        <div class="info-item"><span class="info-label">Parentesco</span><span class="info-value">${r.Parentesco}</span></div>
+                        <div class="info-item"><span class="info-label">Cédula</span><span class="info-value">${r.Cedula}</span></div>
+                        <div class="info-item"><span class="info-label">Teléfonos</span><span class="info-value">${r.Telefonos || 'N/A'}</span></div>
+                    </div>
+                `;
+            }
 
-            // Pagos
-            const pagosTbody = document.querySelector('#det-pagos-table tbody');
-            pagosTbody.innerHTML = '';
-            if (data.pagos?.length) {
+            // Construcción del HTML de Pagos
+            let pagosHtml = '';
+            if (data.pagos && data.pagos.length > 0) {
                 data.pagos.forEach(p => {
-                    const row = document.createElement('tr');
                     const fecha = p.Fecha_pago ? new Date(p.Fecha_pago).toISOString().slice(0, 10) : '';
                     const mes = formatMes(p.Mes_control || p.Mes_referencia, p.Fecha_pago);
-                    const ref = p.Referencia || 'N/A';
-                    const obs = p.Observacion || '';
-                    const mBs = p.Monto_bs != null ? p.Monto_bs : '';
-                    const mUsd = p.Monto_usd != null ? p.Monto_usd : '';
-                    row.innerHTML = `<td>${fecha}</td><td>${mes}</td><td>${ref}</td><td>${obs}</td><td>${mBs}</td><td>${mUsd}</td>`;
-                    pagosTbody.appendChild(row);
+                    const mBs = formatMoney(p.Monto_bs, 'Bs');
+                    const mUsd = formatMoney(p.Monto_usd, 'USD');
+                    
+                    pagosHtml += `
+                        <tr>
+                            <td>${fecha}</td>
+                            <td>${mes}</td>
+                            <td>${p.Referencia || 'N/A'}</td>
+                            <td>${p.Observacion || ''}</td>
+                            <td>Bs. ${mBs}</td>
+                            <td>$${mUsd}</td>
+                        </tr>
+                    `;
                 });
-            } else { pagosTbody.innerHTML = '<tr><td colspan="6">No hay pagos registrados.</td></tr>'; }
+            } else {
+                pagosHtml = '<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">No hay pagos registrados.</td></tr>';
+            }
 
-            // Deudas
-            const deudasTbody = document.querySelector('#det-deudas-table tbody');
-            deudasTbody.innerHTML = '';
-            if (data.deudas?.length) {
+            // Construcción del HTML de Deudas
+            let deudasHtml = '';
+            if (data.deudas && data.deudas.length > 0) {
                 data.deudas.forEach(d => {
-                    const row = document.createElement('tr');
                     const totalPagado = Number(d.Total_Pagado || 0);
                     const montoUsd = Number(d.Monto_usd || 0);
                     const pendiente = montoUsd - totalPagado;
-                    row.innerHTML = `<td>${d.Concepto || ''}</td><td>${montoUsd.toFixed(2)}</td><td>${d.Estado || ''}${pendiente > 0 ? ' — Pendiente: $' + pendiente.toFixed(2) : ''}</td>`;
+                    row.innerHTML = `<td>${d.Concepto || ''}</td><td>${montoUsd.toFixed(4)}</td><td>${d.Estado || ''}${pendiente > 0 ? ' — Pendiente: $' + pendiente.toFixed(4) : ''}</td>`;
                     deudasTbody.appendChild(row);
                 });
-            } else { deudasTbody.innerHTML = '<tr><td colspan="3" style="padding:8px;color:#555;">No posee deudas pendientes.</td></tr>'; }
+            } else {
+                deudasHtml = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#2e7d32;">¡Excelente! No posee deudas pendientes.</td></tr>';
+            }
 
-            // Grupos
-            const gruposTbody = document.querySelector('#det-grupos-table tbody');
-            gruposTbody.innerHTML = '';
-            if (data.grupos?.length) {
-                data.grupos.forEach(g => {
-                    const row = document.createElement('tr');
-                    const fecha = g.Fecha_inscripcion ? new Date(g.Fecha_inscripcion).toISOString().slice(0, 10) : '';
-                    row.innerHTML = `<td>${fecha}</td><td>${g.Nombre_Grupo || ''}</td><td>${g.Nombre_Curso || ''}</td>`;
-                    gruposTbody.appendChild(row);
-                });
-            } else { gruposTbody.innerHTML = '<tr><td colspan="3">No hay historial de grupos.</td></tr>'; }
+            // Renderizado Final del Modal
+            detailsBody.innerHTML = `
+                <div class="detail-section">
+                    <h3 class="section-title">Datos Personales</h3>
+                    <div class="info-grid">
+                        <div class="info-item"><span class="info-label">Nombre Completo</span><span class="info-value">${est.Nombres} ${est.Apellidos}</span></div>
+                        <div class="info-item"><span class="info-label">Cédula</span><span class="info-value">${est.Cedula || 'N/A'}</span></div>
+                        <div class="info-item"><span class="info-label">Fecha Nacimiento</span><span class="info-value">${fechaNac}</span></div>
+                        <div class="info-item"><span class="info-label">Teléfono</span><span class="info-value">${est.Telefono || 'N/A'}</span></div>
+                        <div class="info-item"><span class="info-label">Correo</span><span class="info-value">${est.Correo || 'N/A'}</span></div>
+                        <div class="info-item" style="grid-column: span 2;"><span class="info-label">Dirección</span><span class="info-value">${est.Direccion || 'N/A'}</span></div>
+                    </div>
+                </div>
+
+                <div class="detail-section representante-card">
+                    <h3 class="section-title" style="border-color: #ffcc80; color: #e65100;">Representante</h3>
+                    ${repHtml}
+                </div>
+
+                <div class="detail-section">
+                    <h3 class="section-title">Historial de Pagos</h3>
+                    <div style="overflow-x:auto;">
+                        <table class="details-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Mes</th>
+                                    <th>Referencia</th>
+                                    <th>Observación</th>
+                                    <th>Monto Bs</th>
+                                    <th>Monto USD</th>
+                                </tr>
+                            </thead>
+                            <tbody>${pagosHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3 class="section-title">Deudas Pendientes</h3>
+                    <table class="details-table">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th>Monto Original</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>${deudasHtml}</tbody>
+                    </table>
+                </div>
+            `;
 
             document.getElementById('student-details-modal').style.display = 'flex';
         } catch (err) { console.error(err); }
@@ -344,8 +414,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('est-Telefono').value = student.Telefono || '';
         document.getElementById('est-Correo').value = student.Correo || '';
         document.getElementById('est-Direccion').value = student.Direccion || '';
-        
-        // Nota: La edición de grupos/inscripciones suele ser compleja, aquí solo editamos datos básicos.
     }
 
     // --- RENDER GRUPOS (CARDS) ---
