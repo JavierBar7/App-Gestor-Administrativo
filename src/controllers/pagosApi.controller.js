@@ -1,7 +1,6 @@
 const conn = require('../../config/database');
 const { Estudiante } = require('../models/Estudiante');
 
-// Create a payment for a student, optionally registros parciales and billetes for cash
 exports.createPayment = async (req, res) => {
     try {
         const payload = req.body;
@@ -14,7 +13,7 @@ exports.createPayment = async (req, res) => {
             const [rows] = await conn.promise().query('SELECT idMetodos_pago, Nombre, Tipo_Validacion FROM metodos_pagos WHERE idMetodos_pago = ?', [metodoId]);
             if (Array.isArray(rows) && rows.length) metodoRow = rows[0];
         } catch (mErr) {
-            console.warn('No se pudo obtener metodos_pagos para validación:', mErr);
+            console.warn('No se pudo obtener metodos_pagos:', mErr);
         }
         
         const idDeuda = payload.idDeuda || null;
@@ -23,57 +22,54 @@ exports.createPayment = async (req, res) => {
         const parciales = Array.isArray(payload.parciales) ? payload.parciales : [];
         const billetes = Array.isArray(payload.billetes) ? payload.billetes : [];
         
-        // Nuevos campos del formulario avanzado
         const conceptoManual = payload.Concepto_Manual || '';
-        const observacion = payload.Observacion || null;
+        const userObservacion = payload.Observacion || '';
         const mesRef = payload.Mes_referencia || null;
 
         // 2. Validaciones básicas
         if (!idEstudiante || !metodoId || isNaN(monto) || monto <= 0) {
-            return res.status(400).json({ success: false, message: 'Faltan datos requeridos del pago (Estudiante, Método o Monto)' });
+            return res.status(400).json({ success: false, message: 'Faltan datos requeridos' });
         }
 
-        // Validación Pago Móvil
+        // VALIDACIÓN DE REFERENCIA ESTRICTA
+        // Si el método suele requerir referencia (Transferencia, Pago Movil), no aceptamos vacíos.
+        // En tu BD: 1=Transferencia, 2=Pago Movil. (O validamos por nombre/tipo)
         const metodoName = metodoRow ? String(metodoRow.Nombre || '').toLowerCase() : '';
         const metodoTipo = metodoRow ? String(metodoRow.Tipo_Validacion || '').toLowerCase() : '';
-        const isPagoMovil = metodoTipo.includes('movil') || metodoName.includes('pago movil') || metodoName.includes('movil');
         
-        // Referencia base
-        let referenciaInput = payload.referencia;
+        // Consideramos obligatorio si es 'movil', 'transferencia' o 'banco'
+        const requiereRef = metodoTipo.includes('movil') || metodoName.includes('movil') || 
+                            metodoName.includes('transfer') || metodoName.includes('banco');
+        
+        let referenciaFinal = payload.referencia;
 
-        if (isPagoMovil) {
-            if (!referenciaInput || String(referenciaInput).trim() === '') {
-                return res.status(400).json({ success: false, message: 'Pago móvil requiere referencia de la transacción' });
+        if (requiereRef) {
+            if (!referenciaFinal || String(referenciaFinal).trim() === '') {
+                return res.status(400).json({ success: false, message: `El método ${metodoRow ? metodoRow.Nombre : ''} requiere un número de referencia.` });
+            }
+        } else {
+            // Si es efectivo/cash y viene vacío, podemos dejarlo null o poner guión, pero ya NO ponemos "Pendiente" automático
+            if (!referenciaFinal || String(referenciaFinal).trim() === '') {
+                referenciaFinal = null; 
             }
         }
 
-        // 3. Procesar Referencia Final (Concatenar concepto si es Abono/Manual)
-        // Si no hay referencia, usamos 'Pendiente' o 'Efectivo'
-        let referenciaFinal = referenciaInput;
-        if (!referenciaFinal || referenciaFinal.trim() === '') {
-            referenciaFinal = 'Pendiente';
-        }
-        
-        // Si hay un concepto manual (ej. "Abono: ..."), lo agregamos a la referencia para que se vea en el historial de pagos
-        if (conceptoManual) {
-            referenciaFinal = `${referenciaFinal} - ${conceptoManual}`;
-        }
+        // 4. Observación
+        let observacionFinal = [];
+        if (conceptoManual) observacionFinal.push(conceptoManual);
+        if (userObservacion) observacionFinal.push(userObservacion);
+        const obsString = observacionFinal.length > 0 ? observacionFinal.join(' - ') : null;
 
-        // 4. Lógica de Cuenta Destino Automática
-        // 1: Caja Chica, 2: Banco
-        let idCuentaAuto = 1; 
-        if (metodoId === 1 || metodoId === 2) { // Transferencia o Pago Móvil -> Banco
-            idCuentaAuto = 2; 
-        }
+        // 5. Cuenta y Tasa
+        let idCuentaAuto = (metodoId === 1 || metodoId === 2) ? 2 : 1; 
         const idCuentaFinal = payload.idCuenta_Destino || idCuentaAuto;
 
-        // 5. Cálculos de Tasa y Montos
         const tasaActual = await Estudiante.getLatestTasa();
         let Monto_bs = null;
         let Monto_usd = null;
         let Tasa_Pago = tasaActual || 1;
 
-        if (moneda === 'usd' || moneda === 'dolar' || moneda === 'usd$') {
+        if (moneda.includes('usd') || moneda.includes('dolar')) {
             Monto_usd = Number(monto.toFixed(4));
             if (tasaActual) Monto_bs = Number((Monto_usd * tasaActual).toFixed(4));
         } else {
@@ -85,93 +81,58 @@ exports.createPayment = async (req, res) => {
 
         const Fecha_pago = payload.Fecha_pago || new Date().toISOString().slice(0,19).replace('T', ' ');
 
-        // 6. Crear el Pago en la BD
+        // 6. Insertar Pago
         const idPago = await Estudiante.createPago({
-            idDeuda: idDeuda, // Puede ser null si es mensualidad directa o abono
+            idDeuda,
             idMetodos_pago: metodoId,
             idCuenta_Destino: idCuentaFinal,
             idEstudiante,
-            Referencia: referenciaFinal,
-            Mes_referencia: mesRef, // Esto ayuda a la lógica interna del modelo si la tiene
+            Referencia: referenciaFinal, // Será el número real o null (nunca "Pendiente" automático)
+            observacion: obsString,
             Monto_bs,
-            Tasa_Pago,
+            Tasa_Pago: tasaActual,
             Monto_usd,
             Fecha_pago
         });
 
-        // 7. Control de Mensualidades (Si es pago de mensualidad)
+        // 7. Control de Mensualidades
         if (mesRef) {
             try {
                 const idGrupoControl = payload.idGrupo || null;
-                
-                // Parsear YYYY-MM
                 const [yearStr, monthStr] = mesRef.split('-');
-                const yearNum = parseInt(yearStr);
-                const monthNum = parseInt(monthStr);
-                const mesDateStr = `${mesRef}-01`; // YYYY-MM-01
+                const mesDateStr = `${mesRef}-01`;
 
-                // Verificar si ya existe registro para ese mes (evitar duplicados)
-                const [exists] = await conn.promise().query(
-                    'SELECT idControl FROM control_mensualidades WHERE idEstudiante = ? AND Mes = ? AND Year = ?',
-                    [idEstudiante, monthNum, yearNum]
+                await conn.promise().query(
+                    `INSERT IGNORE INTO control_mensualidades (idEstudiante, idPago, Mes, Year, Mes_date, idGrupo)
+                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    [idEstudiante, idPago, parseInt(monthStr), parseInt(yearStr), mesDateStr, idGrupoControl]
                 );
-
-                if (exists.length === 0) {
-                    await conn.promise().query(
-                        `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Year, Mes_date, Observacion, idGrupo)
-                         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                        [idEstudiante, idPago, monthNum, yearNum, mesDateStr, observacion, idGrupoControl]
-                    );
-                    console.log('✅ Control mensualidades insertado:', mesRef);
-                } else {
-                    console.log('⚠️ Ya existía control para el mes', mesRef, '- Actualizando pago asociado...');
-                    // Opcional: Actualizar el pago asociado si era un abono previo, o dejarlo.
-                    // Por ahora solo logueamos para no romper lógica de historial.
-                }
-
             } catch (cmErr) {
-                console.error('❌ Error insertando control_mensualidades:', cmErr);
+                console.error('Error control mensualidad:', cmErr);
             }
         }
 
-        // 8. Pagos Parciales (Si se seleccionó una deuda específica)
+        // 8. Pagos Parciales
         if (idDeuda && !parciales.length) {
-            // Si venía un idDeuda pero NO array de parciales explícito, asumimos que este pago abona a esa deuda
-            // Calculamos el monto del abono (que es el monto total del pago)
-            await Estudiante.createPagoParcial({ 
-                idPago, 
-                idDeuda: idDeuda, 
-                Monto_parcial: Monto_usd 
-            });
-            // Intentar reconciliar (marcar como pagada si se completó)
+            await Estudiante.createPagoParcial({ idPago, idDeuda, Monto_parcial: Monto_usd });
             await Estudiante.reconcileDeuda(idDeuda);
-        } 
-        else if (parciales.length) {
-            // Si vienen parciales explícitos (lógica legacy o múltiple)
+        } else if (parciales.length) {
             for (const p of parciales) {
-                const montoPar = Number(p.monto || 0);
-                const deudaPar = p.idDeuda || idDeuda;
-                if (!isNaN(montoPar) && montoPar > 0 && deudaPar) {
-                    await Estudiante.createPagoParcial({ idPago, idDeuda: deudaPar, Monto_parcial: montoPar });
-                    await Estudiante.reconcileDeuda(deudaPar);
-                }
+                await Estudiante.createPagoParcial({ idPago, idDeuda: p.idDeuda || idDeuda, Monto_parcial: p.monto });
+                await Estudiante.reconcileDeuda(p.idDeuda || idDeuda);
             }
         }
 
-        // 9. Billetes (Cash)
+        // 9. Billetes
         if (billetes.length) {
             for (const b of billetes) {
-                const codigo = b.Codigo_billete || b.codigo || null;
-                const denom = Number(b.Denominacion || b.denom || 0);
-                if (!codigo || isNaN(denom) || denom <= 0) continue;
-                await conn.promise().query(
-                    'INSERT INTO billetes_cash (idPago, Codigo_billete, Denominacion) VALUES (?, ?, ?)',
-                    [idPago, codigo, denom]
-                );
+                if (b.Codigo_billete && b.Denominacion) {
+                    await conn.promise().query('INSERT INTO billetes_cash (idPago, Codigo_billete, Denominacion) VALUES (?, ?, ?)', [idPago, b.Codigo_billete, b.Denominacion]);
+                }
             }
         }
 
-        return res.json({ success: true, idPago, Monto_bs, Monto_usd, Tasa_Pago });
+        return res.json({ success: true, idPago });
 
     } catch (err) {
         console.error('Error creating payment:', err);

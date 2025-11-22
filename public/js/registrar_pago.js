@@ -23,17 +23,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const submitBtn = document.getElementById('submit-payment-btn');
     const cancelBtn = document.getElementById('cancel-btn');
 
-    // Elementos de las Secciones Dinámicas
+    // Secciones Dinámicas
+    const sectionInscripcion = document.getElementById('opt-inscripcion'); 
     const sectionMensualidad = document.getElementById('opt-mensualidad');
     const sectionDeuda = document.getElementById('opt-deuda');
     const sectionAbono = document.getElementById('opt-abono');
+    
     const debtSelect = document.getElementById('pay-deuda-select');
     const deudaInfoTotal = document.getElementById('deuda-info-total');
     const deudaInfoRestante = document.getElementById('deuda-info-restante');
+    const conceptoInscripcionInput = document.getElementById('pay-concepto-inscripcion'); 
 
     // --- ESTADO ---
     let currentTasa = 0;
     let currentGroupId = null;
+    let studentGroupNames = [];
     let paymentMethods = [];
     let selectedMethods = new Set(); 
     let studentDebts = []; 
@@ -51,14 +55,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- EVENT LISTENERS ---
-
     cancelBtn.addEventListener('click', () => {
         window.location.href = 'estudiantes.html';
     });
 
     submitBtn.addEventListener('click', handleSubmit);
 
-    // Lógica de Radio Buttons (Tipo de Pago)
+    // Lógica de Radio Buttons
     const radios = document.getElementsByName('payment-type');
     radios.forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -67,23 +70,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function handlePaymentTypeChange(type) {
-        // Ocultar todas las secciones primero
+        if(sectionInscripcion) sectionInscripcion.style.display = 'none';
         if(sectionMensualidad) sectionMensualidad.style.display = 'none';
         if(sectionDeuda) sectionDeuda.style.display = 'none';
         if(sectionAbono) sectionAbono.style.display = 'none';
 
-        // Mostrar la seleccionada
-        if (type === 'mensualidad') {
+        if (type === 'inscripcion') {
+            if(sectionInscripcion) {
+                sectionInscripcion.style.display = 'block';
+                const gruposStr = studentGroupNames.length > 0 ? studentGroupNames.join(', ') : 'Sin grupo asignado';
+                conceptoInscripcionInput.value = `Inscripción (${gruposStr})`;
+            }
+        } else if (type === 'mensualidad') {
             if(sectionMensualidad) sectionMensualidad.style.display = 'block';
         } else if (type === 'deuda') {
             if(sectionDeuda) sectionDeuda.style.display = 'block';
-            loadDebts(); // Cargar deudas solo si selecciona esta opción
+            loadDebts();
         } else if (type === 'abono') {
             if(sectionAbono) sectionAbono.style.display = 'block';
         }
     }
 
-    // Lógica del Select de Deudas
     if (debtSelect) {
         debtSelect.addEventListener('change', () => {
             const selectedOption = debtSelect.options[debtSelect.selectedIndex];
@@ -99,8 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- FUNCIONES DE CARGA DE DATOS ---
-
+    // --- CARGA DE DATOS ---
     async function loadStudentData() {
         try {
             const response = await fetch(`http://localhost:3000/api/estudiantes/${studentId}`);
@@ -110,17 +116,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 studentNameEl.textContent = `${s.Nombres} ${s.Apellidos}`;
                 
                 if (data.grupos && data.grupos.length > 0) {
-                    const lastGroup = data.grupos[0];
-                    studentGroupEl.textContent = `Grupo: ${lastGroup.Nombre_Grupo || 'Sin grupo'}`;
-                    currentGroupId = lastGroup.idGrupo;
+                    studentGroupNames = data.grupos.map(g => g.Nombre_Grupo);
+                    if (data.grupos.length === 1) {
+                        studentGroupEl.textContent = `Grupo: ${data.grupos[0].Nombre_Grupo}`;
+                        currentGroupId = data.grupos[0].idGrupo;
+                    } else {
+                        studentGroupEl.textContent = `Grupos: ${studentGroupNames.join(', ')}`;
+                        currentGroupId = data.grupos[0].idGrupo;
+                    }
                 } else {
                     studentGroupEl.textContent = 'Grupo: Sin asignar';
                     currentGroupId = null;
+                    studentGroupNames = [];
                 }
             }
-        } catch (e) {
-            console.error("Error loading student", e);
-        }
+        } catch (e) { console.error("Error loading student", e); }
     }
 
     async function loadTasa() {
@@ -131,9 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentTasa = Number(data.rate.Tasa_usd_a_bs);
                 tasaDisplayEl.textContent = currentTasa.toFixed(4);
             }
-        } catch (e) {
-            console.error('Error loading tasa', e);
-        }
+        } catch (e) { console.error('Error loading tasa', e); }
     }
 
     async function loadPaymentMethods() {
@@ -147,9 +155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 paymentMethods = data.metodos;
                 renderPaymentMethods();
             }
-        } catch (e) {
-            console.error('Error loading methods', e);
-        }
+        } catch (e) { console.error('Error loading methods', e); }
     }
 
     async function loadDebts() {
@@ -157,29 +163,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             debtSelect.innerHTML = '<option>Cargando...</option>';
             const res = await fetch(`http://localhost:3000/api/estudiantes/${studentId}/deudas`);
             const data = await res.json();
-            
             debtSelect.innerHTML = '<option value="">-- Seleccione --</option>';
-            
             if (data.success && data.deudas) {
                 studentDebts = data.deudas;
                 studentDebts.forEach(d => {
                     const opt = document.createElement('option');
-                    opt.value = d.idDeuda; // Puede ser int o string 'virtual_...'
-                    
+                    opt.value = d.idDeuda;
                     const montoTotal = Number(d.Monto_usd);
                     const pagado = Number(d.Total_Pagado || 0);
                     const restante = d.esVirtual ? montoTotal : (montoTotal - pagado);
-
                     opt.textContent = `${d.Concepto} - Pendiente: $${restante.toFixed(2)}`;
                     opt.setAttribute('data-total', montoTotal);
                     opt.setAttribute('data-remaining', restante);
-                    
                     debtSelect.appendChild(opt);
                 });
             } else {
-                const opt = document.createElement('option');
-                opt.textContent = "No hay deudas pendientes";
-                debtSelect.appendChild(opt);
+                const opt = document.createElement('option'); opt.textContent = "No hay deudas pendientes"; debtSelect.appendChild(opt);
             }
         } catch (e) {
             console.error('Error loading debts', e);
@@ -202,7 +201,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     function toggleMethod(method) {
         const id = method.idMetodos_pago;
         const tab = methodsContainer.querySelector(`.method-tab[data-id="${id}"]`);
-        
         if (selectedMethods.has(id)) {
             selectedMethods.delete(id);
             tab.classList.remove('active');
@@ -227,18 +225,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isEfectivoBs = nameLower.includes('efectivo');
         
         let isUsd = false;
-        if (isCashUsd || nameLower.includes('usd') || nameLower.includes('dolar')) {
-            isUsd = true;
-        } else if (method.Moneda_asociada && (method.Moneda_asociada.toLowerCase() === 'usd' || method.Moneda_asociada.toLowerCase() === 'dolar')) {
-            isUsd = true;
-        }
+        if (isCashUsd || nameLower.includes('usd') || nameLower.includes('dolar')) isUsd = true;
+        else if (method.Moneda_asociada && (method.Moneda_asociada.toLowerCase() === 'usd' || method.Moneda_asociada.toLowerCase() === 'dolar')) isUsd = true;
 
         const needsReference = !isCashUsd && !isEfectivoBs;
         const needsBills = isCashUsd;
         const currencyLabel = isUsd ? 'USD' : 'Bs';
 
         let html = `<h4>${method.Nombre}</h4>`;
-        
         html += `
             <div class="split-payment-row">
                 <div class="input-group">
@@ -249,25 +243,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <label>Equivalente: <span class="equiv-display">0.00</span> ${isUsd ? 'Bs' : 'USD'}</label>
                 </div>
         `;
-
+        // Campo de referencia (Solo si es necesario)
         if (needsReference) {
             html += `
                 <div class="input-group">
-                    <label>Referencia / Comprobante</label>
-                    <input type="text" class="ref-input">
+                    <label>Referencia / Comprobante <span style="color:red">*</span></label>
+                    <input type="text" class="ref-input" placeholder="Obligatorio">
                 </div>
             `;
         }
         html += `</div>`;
 
         if (needsBills) {
-            html += `
-                <div class="billetes-section">
-                    <label>Detalle de Billetes (Cash USD)</label>
-                    <div class="billetes-list" id="billetes-list-${id}"></div>
-                    <button type="button" class="btn-add-billete" style="margin-top:5px; font-size:0.8em; padding:4px 8px;">+ Agregar Billete</button>
-                </div>
-            `;
+            html += `<div class="billetes-section"><label>Detalle de Billetes (Cash USD)</label><div class="billetes-list" id="billetes-list-${id}"></div><button type="button" class="btn-add-billete" style="margin-top:5px; font-size:0.8em; padding:4px 8px;">+ Agregar Billete</button></div>`;
         }
 
         container.innerHTML = html;
@@ -277,11 +265,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         amountInput.addEventListener('input', (e) => {
             const val = Number(e.target.value);
             const equivSpan = container.querySelector('.equiv-display');
-            if (isUsd) {
-                equivSpan.textContent = (val * currentTasa).toFixed(2);
-            } else {
-                equivSpan.textContent = (currentTasa > 0 ? val / currentTasa : 0).toFixed(2);
-            }
+            if (isUsd) equivSpan.textContent = (val * currentTasa).toFixed(2);
+            else equivSpan.textContent = (currentTasa > 0 ? val / currentTasa : 0).toFixed(2);
             updateTotals();
         });
 
@@ -296,11 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function addBilleteRow(container) {
         const row = document.createElement('div');
         row.className = 'billete-row';
-        row.innerHTML = `
-            <input type="text" placeholder="Serial" class="billete-serial" style="flex:2;">
-            <input type="number" placeholder="Denominación" class="billete-denom" style="flex:1;">
-            <button type="button" class="remove-billete" style="color:red; border:none; background:none; cursor:pointer;">&times;</button>
-        `;
+        row.innerHTML = `<input type="text" placeholder="Serial" class="billete-serial" style="flex:2;"><input type="number" placeholder="Denominación" class="billete-denom" style="flex:1;"><button type="button" class="remove-billete" style="color:red; border:none; background:none; cursor:pointer;">&times;</button>`;
         row.querySelector('.remove-billete').onclick = () => row.remove();
         container.appendChild(row);
     }
@@ -313,104 +294,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateTotals() {
         let totalUsd = 0;
         let totalBs = 0;
-
         const inputs = document.querySelectorAll('.amount-input');
         inputs.forEach(input => {
             const val = Number(input.value) || 0;
             const isUsd = input.dataset.currency === 'usd';
-            
-            if (isUsd) {
-                totalUsd += val;
-                totalBs += val * currentTasa;
-            } else {
-                totalBs += val;
-                totalUsd += (currentTasa > 0 ? val / currentTasa : 0);
-            }
+            if (isUsd) { totalUsd += val; totalBs += val * currentTasa; }
+            else { totalBs += val; totalUsd += (currentTasa > 0 ? val / currentTasa : 0); }
         });
-
         totalUsdEl.textContent = `$${totalUsd.toFixed(2)} USD`;
         totalBsEl.textContent = `Bs. ${totalBs.toFixed(2)}`;
     }
 
     async function handleSubmit() {
-        if (selectedMethods.size === 0) {
-            alert('Seleccione al menos un método de pago.');
-            return;
-        }
+        if (selectedMethods.size === 0) return alert('Seleccione al menos un método de pago.');
 
-        // Determinar Tipo de Pago
-        const paymentTypeRadio = document.querySelector('input[name="payment-type"]:checked');
-        const paymentType = paymentTypeRadio ? paymentTypeRadio.value : 'mensualidad'; // Default
-
+        const paymentType = document.querySelector('input[name="payment-type"]:checked').value;
         let mesReferencia = null;
         let idDeudaSeleccionada = null;
         let conceptoFinal = null;
 
-        // Validar según tipo
-        if (paymentType === 'mensualidad') {
+        // VALIDAR TIPO DE PAGO
+        if (paymentType === 'inscripcion') {
+            conceptoFinal = document.getElementById('pay-concepto-inscripcion').value;
+        } 
+        else if (paymentType === 'mensualidad') {
             mesReferencia = document.getElementById('pay-mes-selector').value;
-            if (!mesReferencia) {
-                alert('Por favor seleccione el Mes a pagar.');
-                return;
-            }
+            if (!mesReferencia) return alert('Por favor seleccione el Mes a pagar.');
             conceptoFinal = `Mensualidad ${mesReferencia}`;
         } 
         else if (paymentType === 'deuda') {
             idDeudaSeleccionada = document.getElementById('pay-deuda-select').value;
-            if (!idDeudaSeleccionada) {
-                alert('Por favor seleccione una Deuda.');
-                return;
-            }
-            
-            // Verificar si es una deuda virtual (calculada)
+            if (!idDeudaSeleccionada) return alert('Por favor seleccione una Deuda.');
             if (idDeudaSeleccionada.toString().startsWith('virtual_')) {
-                // Extraer YYYY-MM de virtual_YYYY-MM
                 mesReferencia = idDeudaSeleccionada.split('virtual_')[1];
-                idDeudaSeleccionada = null; // No es un ID real de BD todavía
+                idDeudaSeleccionada = null;
                 conceptoFinal = `Mensualidad ${mesReferencia}`;
-            } else {
-                // Es una deuda real con ID numérico
-                // El backend usará el ID para descontar
             }
         } 
         else if (paymentType === 'abono') {
             const desc = document.getElementById('pay-concepto-abono').value;
-            if (!desc || desc.trim() === '') {
-                alert('Por favor escriba el concepto del abono.');
-                return;
-            }
+            if (!desc || desc.trim() === '') return alert('Por favor escriba el concepto del abono.');
             conceptoFinal = `Abono: ${desc}`;
         }
 
         const observacion = document.getElementById('pay-observacion').value;
-        
-        // Recolectar pagos
         const payments = [];
         let hasError = false;
 
         for (const id of selectedMethods) {
             const container = document.getElementById(`method-form-${id}`);
-            const amountInput = container.querySelector('.amount-input');
-            const amount = Number(amountInput.value);
+            const amount = Number(container.querySelector('.amount-input').value);
             
             if (amount <= 0) {
-                alert('El monto debe ser mayor a 0 para todos los métodos seleccionados.');
+                alert('El monto debe ser mayor a 0.');
                 hasError = true;
                 break;
             }
 
-            const isUsd = amountInput.dataset.currency === 'usd';
             const refInput = container.querySelector('.ref-input');
-            const referencia = refInput ? refInput.value : null;
+            const referencia = refInput ? refInput.value.trim() : null;
 
+            // --- VALIDACIÓN DE REFERENCIA OBLIGATORIA ---
+            // Si el campo de referencia existe (es visible), es obligatorio
+            if (refInput && (!referencia || referencia === '')) {
+                alert('⚠️ El número de referencia es obligatorio para este método de pago.');
+                hasError = true;
+                refInput.focus();
+                break;
+            }
+
+            const isUsd = container.querySelector('.amount-input').dataset.currency === 'usd';
             const billetes = [];
             const billeteRows = container.querySelectorAll('.billete-row');
             billeteRows.forEach(row => {
                 const serial = row.querySelector('.billete-serial').value;
                 const denom = row.querySelector('.billete-denom').value;
-                if (serial && denom) {
-                    billetes.push({ Codigo_billete: serial, Denominacion: denom });
-                }
+                if (serial && denom) billetes.push({ Codigo_billete: serial, Denominacion: denom });
             });
 
             payments.push({
@@ -418,9 +377,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 metodoId: id,
                 monto: amount,
                 moneda: isUsd ? 'usd' : 'bs',
-                referencia: referencia,
+                referencia: referencia, // Se enviará null si es efectivo/cash (si no hay input)
                 billetes: billetes,
-                // Campos Nuevos
                 Mes_referencia: mesReferencia,
                 idDeuda: idDeudaSeleccionada,
                 Concepto_Manual: conceptoFinal,
@@ -431,22 +389,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (hasError) return;
 
-        // Enviar peticiones
         submitBtn.disabled = true;
         submitBtn.textContent = 'Procesando...';
 
         try {
             for (const p of payments) {
-                console.log('Enviando pago:', p);
                 const res = await fetch('http://localhost:3000/api/pagos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(p)
                 });
                 const data = await res.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Error registrando uno de los pagos.');
-                }
+                if (!data.success) throw new Error(data.message || 'Error registrando pago.');
             }
             alert('Pagos registrados exitosamente.');
             window.location.href = 'estudiantes.html';

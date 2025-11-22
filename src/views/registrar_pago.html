@@ -183,29 +183,42 @@
             </div>
           </div>
 
-<div class="input-group" style="margin-bottom: 15px; background: #e3f2fd; padding: 10px 15px; border-radius: 8px; display: flex; flex-direction: row; align-items: center; gap: 15px;">
-    <label style="color: #1565c0; font-weight: bold; font-size: 1em; margin: 0; white-space: nowrap;">Tipo de Pago:</label>
-    
-    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: nowrap;">
-        <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
-            <input type="radio" name="payment-type" value="mensualidad" checked> Mensualidad
-        </label>
-        <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
-            <input type="radio" name="payment-type" value="deuda"> Deuda
-        </label>
-        <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
-            <input type="radio" name="payment-type" value="abono"> Abono
-        </label>
-    </div>
-</div>
+          <div class="input-group" style="margin-bottom: 15px; background: #e3f2fd; padding: 10px 15px; border-radius: 8px; display: flex; flex-direction: row; align-items: center; gap: 15px;">
+            <label style="color: #1565c0; font-weight: bold; font-size: 1em; margin: 0; white-space: nowrap;">Tipo de Pago:</label>
+            
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
+                    <input type="radio" name="payment-type" value="inscripcion"> Inscripción
+                </label>
+
+                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
+                    <input type="radio" name="payment-type" value="mensualidad" checked> Mensualidad
+                </label>
+                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
+                    <input type="radio" name="payment-type" value="deuda"> Deuda
+                </label>
+                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
+                    <input type="radio" name="payment-type" value="abono"> Abono
+                </label>
+            </div>
+          </div>
 
           <div id="dynamic-payment-options" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
             
+            <div id="opt-inscripcion" style="display: none;">
+                <label style="font-weight: 600;">Concepto de Inscripción:</label>
+                <input type="text" id="pay-concepto-inscripcion" readonly 
+                       style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9; color: #333; font-weight: bold;">
+                <p style="font-size: 0.85em; color: #666; margin-top: 8px;">
+                    <span style="color: #17a2b8;">ℹ️</span> El concepto se genera automáticamente según los grupos inscritos.
+                </p>
+            </div>
+
             <div id="opt-mensualidad">
                 <label style="font-weight: 600;">Seleccione el Mes a Pagar:</label>
                 <input type="month" id="pay-mes-selector" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
                 <p style="font-size: 0.85em; color: #666; margin-top: 8px;">
-                    <span style="color: #28a745;">ℹ️</span> Esto registrará el mes seleccionado como <strong>solvente</strong> en el historial del estudiante.
+                    <span style="color: #28a745;">ℹ️</span> Esto registrará el mes seleccionado como <strong>solvente</strong>.
                 </p>
             </div>
 
@@ -222,9 +235,10 @@
 
             <div id="opt-abono" style="display: none;">
                 <label style="font-weight: 600;">Concepto del Abono:</label>
-                <input type="text" id="pay-concepto-abono" placeholder="Ej: Adelanto Mensualidad Diciembre, Compra de Libro, etc." style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                <input type="text" id="pay-concepto-abono" placeholder="Ej: Compra de libro, guía, adelanto..." style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
             </div>
           </div>
+
           <h3>Métodos de Pago</h3>
           <p style="font-size: 0.9em; color: #666; margin-bottom: 10px">
             Seleccione uno o más métodos para pagos fraccionados.
