@@ -7,7 +7,7 @@ async function seedFinancialData() {
         // ==========================================
         // 1. LIMPIEZA DE TABLAS
         // ==========================================
-        console.log('🧹 Limpiando tablas...');
+        //console.log('🧹 Limpiando tablas...');
         await conn.promise().query("SET FOREIGN_KEY_CHECKS = 0");
         const tablas = [
             'historial_tasa', 'tasa_cambio', 'metodos_pagos', 'cuenta_destino',
