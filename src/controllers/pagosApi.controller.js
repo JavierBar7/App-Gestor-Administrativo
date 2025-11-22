@@ -181,4 +181,24 @@ exports.createPayment = async (req, res) => {
             code: err.code
         });
     }
+    }
+};
+
+exports.checkReference = async (req, res) => {
+    try {
+        const { referencia } = req.query;
+        if (!referencia) return res.status(400).json({ success: false, message: 'Referencia requerida' });
+
+        const existing = await Estudiante.checkReferenceExists(referencia);
+        if (existing) {
+            return res.json({ 
+                exists: true, 
+                studentName: `${existing.Nombres} ${existing.Apellidos}` 
+            });
+        }
+        return res.json({ exists: false });
+    } catch (err) {
+        console.error('Error checking reference:', err);
+        return res.status(500).json({ success: false, message: 'Error interno' });
+    }
 };

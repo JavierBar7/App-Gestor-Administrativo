@@ -255,6 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="input-group">
                     <label>Referencia / Comprobante</label>
                     <input type="text" class="ref-input">
+                    <small class="ref-warning" style="color: #d9534f; display: none; font-weight: bold; margin-top: 4px;"></small>
                 </div>
             `;
         }
@@ -272,6 +273,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         container.innerHTML = html;
         activeMethodsForms.appendChild(container);
+
+        // Event Listener para Referencia
+        const refInput = container.querySelector('.ref-input');
+        if (refInput) {
+            refInput.addEventListener('blur', async () => {
+                const val = refInput.value.trim();
+                const warnEl = container.querySelector('.ref-warning');
+                if (!val) {
+                    warnEl.style.display = 'none';
+                    return;
+                }
+                
+                try {
+                    const res = await fetch(`http://localhost:3000/api/pagos/check-reference?referencia=${encodeURIComponent(val)}`);
+                    const data = await res.json();
+                    if (data.exists) {
+                        warnEl.textContent = `⚠️ Esta referencia ya está registrada en un pago de ${data.studentName}`;
+                        warnEl.style.display = 'block';
+                    } else {
+                        warnEl.style.display = 'none';
+                    }
+                } catch (err) {
+                    console.error('Error checking reference:', err);
+                }
+            });
+        }
 
         const amountInput = container.querySelector('.amount-input');
         amountInput.addEventListener('input', (e) => {

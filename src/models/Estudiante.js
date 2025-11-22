@@ -453,6 +453,16 @@
             return { hasDebt: true, status: 'Deuda' };
         }
     }
+    static async checkReferenceExists(referencia) {
+        const [rows] = await conn.promise().query(
+            `SELECT p.Referencia, e.Nombres, e.Apellidos 
+             FROM pagos p
+             JOIN estudiantes e ON e.idEstudiante = p.idEstudiante
+             WHERE p.Referencia = ? LIMIT 1`,
+            [referencia]
+        );
+        return rows && rows.length ? rows[0] : null;
+    }
 }
 
 module.exports = { Estudiante };

@@ -34,24 +34,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             const d = new Date(mesVal);
             if (!isNaN(d.getTime())) {
                 const nm = d.toLocaleString('es-ES', { month: 'long' });
-                return nm.charAt(0).toUpperCase() + nm.slice(1);
+                const year = d.getFullYear();
+                return nm.charAt(0).toUpperCase() + nm.slice(1) + ' ' + year;
             }
         }
         if (mesVal && /^\d{4}-\d{2}-\d{2}$/.test(mesVal)) {
             const d = new Date(mesVal);
-            const nm = d.toLocaleString('es-ES', { month: 'long' });
-            return nm.charAt(0).toUpperCase() + nm.slice(1);
+            if (!isNaN(d.getTime())) {
+                const nm = d.toLocaleString('es-ES', { month: 'long' });
+                const year = d.getFullYear();
+                return nm.charAt(0).toUpperCase() + nm.slice(1) + ' ' + year;
+            }
         }
         if (mesVal && /^\d{4}-\d{2}$/.test(mesVal)) {
             const [y, m] = mesVal.split('-');
             const d = new Date(y, m - 1, 1);
-            const nm = d.toLocaleString('es-ES', { month: 'long' });
-            return nm.charAt(0).toUpperCase() + nm.slice(1);
+            if (!isNaN(d.getTime())) {
+                const nm = d.toLocaleString('es-ES', { month: 'long' });
+                return nm.charAt(0).toUpperCase() + nm.slice(1) + ' ' + y;
+            }
         }
         if (!mesVal && fechaPago) {
             const d = new Date(fechaPago);
-            const nm = d.toLocaleString('es-ES', { month: 'long' });
-            return nm.charAt(0).toUpperCase() + nm.slice(1);
+            if (!isNaN(d.getTime())) {
+                const nm = d.toLocaleString('es-ES', { month: 'long' });
+                const year = d.getFullYear();
+                return nm.charAt(0).toUpperCase() + nm.slice(1) + ' ' + year;
+            }
         }
         return mesVal || '';
     }
@@ -298,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const totalPagado = Number(d.Total_Pagado || 0);
                     const montoUsd = Number(d.Monto_usd || 0);
                     const pendiente = montoUsd - totalPagado;
-                    row.innerHTML = `<td>${d.Concepto || ''}</td><td>${montoUsd.toFixed(4)}</td><td>${d.Estado || ''}${pendiente > 0 ? ' — Pendiente: $' + pendiente.toFixed(4) : ''}</td>`;
+                    row.innerHTML = `<td>${d.Concepto || ''}</td><td>${montoUsd.toFixed(2)}</td><td>${d.Estado || ''}${pendiente > 0 ? ' — Pendiente: $' + pendiente.toFixed(2) : ''}</td>`;
                     deudasTbody.appendChild(row);
                 });
             } else { deudasTbody.innerHTML = '<tr><td colspan="3" style="padding:8px;color:#555;">No posee deudas pendientes.</td></tr>'; }
