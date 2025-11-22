@@ -183,20 +183,21 @@
             </div>
           </div>
 
-          <div class="input-group" style="margin-bottom: 15px; background: #e3f2fd; padding: 15px; border-radius: 8px;">
-            <label style="color: #1565c0; font-weight: bold; font-size: 1.1em;">1. Seleccione el Tipo de Pago</label>
-            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
-                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                    <input type="radio" name="payment-type" value="mensualidad" checked> Pago de Mensualidad
-                </label>
-                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                    <input type="radio" name="payment-type" value="deuda"> Pago de Deuda Existente
-                </label>
-                <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                    <input type="radio" name="payment-type" value="abono"> Abono / Otros
-                </label>
-            </div>
-          </div>
+<div class="input-group" style="margin-bottom: 15px; background: #e3f2fd; padding: 10px 15px; border-radius: 8px; display: flex; flex-direction: row; align-items: center; gap: 15px;">
+    <label style="color: #1565c0; font-weight: bold; font-size: 1em; margin: 0; white-space: nowrap;">Tipo de Pago:</label>
+    
+    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: nowrap;">
+        <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
+            <input type="radio" name="payment-type" value="mensualidad" checked> Mensualidad
+        </label>
+        <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
+            <input type="radio" name="payment-type" value="deuda"> Deuda
+        </label>
+        <label style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px; font-size: 0.95em; margin: 0;">
+            <input type="radio" name="payment-type" value="abono"> Abono
+        </label>
+    </div>
+</div>
 
           <div id="dynamic-payment-options" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
             
