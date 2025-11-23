@@ -229,4 +229,64 @@ document.addEventListener('DOMContentLoaded', async () => {
             modalErrorMessage.classList.add('visible');
         }
     });
+
+    // --- Lógica para Agregar Usuario ---
+    const btnAddUser = document.getElementById('btn-add-user');
+    const addUserModal = document.getElementById('add-user-modal');
+    const closeAddUser = document.getElementById('close-add-user');
+    const addUserForm = document.getElementById('add-user-form');
+    const addUserError = document.getElementById('add-user-error');
+
+    if (btnAddUser) {
+        btnAddUser.addEventListener('click', () => {
+            addUserForm.reset();
+            addUserError.textContent = '';
+            addUserModal.style.display = 'block';
+        });
+    }
+
+    if (closeAddUser) {
+        closeAddUser.addEventListener('click', () => {
+            addUserModal.style.display = 'none';
+        });
+    }
+
+    // Cerrar modal al hacer clic fuera
+    window.addEventListener('click', (e) => {
+        if (e.target === addUserModal) {
+            addUserModal.style.display = 'none';
+        }
+    });
+
+    if (addUserForm) {
+        addUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            addUserError.textContent = 'Guardando...';
+            
+            const username = document.getElementById('new-username').value;
+            const password = document.getElementById('new-password').value;
+            const rol = document.getElementById('new-rol').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, rol })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Usuario creado exitosamente');
+                    addUserModal.style.display = 'none';
+                    loadUsers(); // Recargar tabla
+                } else {
+                    addUserError.textContent = data.message || 'Error al crear usuario';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                addUserError.textContent = 'Error de conexión';
+            }
+        });
+    }
 });

@@ -9,7 +9,19 @@ app.set('views', path.join(__dirname, 'app/views'));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+// app.use(express.static(path.join(__dirname, 'public')));
+
+// Request logging (simple)
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
+    next();
+});
+
+// Reportes (PDF/Excel) - MOVED TO TOP
+const reportesRoutes = require('../routes/reportesRoutes');
+console.log('Mounting reportesRoutes at /api/reportes');
+app.use('/api/reportes', reportesRoutes);
+app.all('/api/test', (req, res) => res.send('API Test OK'));
 
 // Montar rutas de autenticación
 const loginRoutes = require('../routes/loginRoutes');
@@ -33,11 +45,9 @@ app.use('/api/grupos', grupoRoutes);
 const tasaRoutes = require('../routes/tasaRoutes');
 app.use('/api/tasa', tasaRoutes);
 
-// Request logging (simple)
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
-    next();
-});
+
+
+
 
 // Error handler - centraliza logging de errores y devuelve JSON
 app.use((err, req, res, next) => {

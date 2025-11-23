@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = await res.json();
             if (data.success && data.rate) {
                 currentTasa = Number(data.rate.Tasa_usd_a_bs);
-                tasaDisplayEl.textContent = currentTasa.toFixed(4);
+                tasaDisplayEl.textContent = currentTasa.toFixed(2);
             }
         } catch (e) { console.error('Error loading tasa', e); }
     }

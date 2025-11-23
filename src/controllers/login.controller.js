@@ -10,7 +10,8 @@ const login = async (req, res) => {
             return res.json({ success: false, message: 'Usuario o contraseña incorrectos' });
         }
 
-        return res.json({ success: true, role: user.rolName });
+        console.log('Login successful, returning:', { success: true, role: user.rolName, idRol: user.idRol }); // Debug
+        return res.json({ success: true, role: user.rolName, idRol: user.idRol });
     } catch (error) {
         console.error('Error en login:', error);
         return res.status(500).json({ success: false, message: 'Error en el servidor' });

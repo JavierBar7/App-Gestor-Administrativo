@@ -12,7 +12,7 @@ class Usuario {
     static async findUserAndPassword(Nombre_Usuario, Clave) {
         try {
             const [rows] = await conn.promise().query(
-                `SELECT u.idUsuario AS idUsuario, u.Nombre_Usuario, u.Clave, r.Nombre_Rol AS rolName
+                `SELECT u.idUsuario AS idUsuario, u.Nombre_Usuario, u.Clave, u.idRol, r.Nombre_Rol AS rolName
                 FROM usuarios u
                 JOIN roles r ON u.idRol = r.idRol
                 WHERE u.Nombre_Usuario = ? AND u.Clave = ?`,

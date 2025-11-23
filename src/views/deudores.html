@@ -1,144 +1,350 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Deudores - Just Talk Academy</title>
-    <link rel="stylesheet" href="../../public/css/gestion.css">
-    <link rel="stylesheet" href="../../public/css/deudores.css">
-</head>
-<body>
+    <link rel="stylesheet" href="../../public/css/gestion.css" />
+    <link rel="stylesheet" href="../../public/css/deudores.css" />
+  </head>
+  <body>
     <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <img src="logo.png" alt="Logo Just Talk Academy" class="sidebar-logo">
-                <h2>Just Talk</h2>
-                <h2>Academy</h2>
-            </div>
-            <nav class="nav-menu">
-                <ul>
-                    <li><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
-                    <li><a href="#" id="view-students-btn">Estudiantes</a></li>
-                    <li><a href="#" id="view-cursos-btn">Cursos</a></li>
-                    <li class="active"><a href="#" id="view-deudores-btn">Deudores</a></li>
-                    <li class="logout-container"><button id="logout-btn" class="logout-btn" title="Cerrar sesión"><img src="../../public/MiLogOut.png" alt="Salir"/></button></li>
-                </ul>
-            </nav>
-        </aside>
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <img
+            src="logo.png"
+            alt="Logo Just Talk Academy"
+            class="sidebar-logo"
+          />
+          <h2>Just Talk</h2>
+          <h2>Academy</h2>
+        </div>
+        <nav class="nav-menu">
+          <ul>
+            <li><a href="#" id="view-users-btn">Gestión de Usuarios</a></li>
+            <li><a href="#" id="view-students-btn">Estudiantes</a></li>
+            <li><a href="#" id="view-cursos-btn">Cursos</a></li>
+            <li class="active">
+              <a href="#" id="view-deudores-btn">Deudores</a>
+            </li>
+            <li class="logout-container">
+              <button id="logout-btn" class="logout-btn" title="Cerrar sesión">
+                <img src="../../public/MiLogOut.png" alt="Salir" />
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </aside>
 
-        <main class="content-area">
-            <h1>Control de Deudores</h1>
-            
-            <div class="user-table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="text-align: left;">Estudiante</th>
-                            <th>Información de la deuda</th>
-                            <th style="text-align: left;">Total Deuda ($)</th>
-                            <th style="text-align: left;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="deudores-table-body">
-                        <tr><td colspan="4" style="text-align:center">Cargando...</td></tr>
-                    </tbody>
-                </table>
-                <p id="no-data-msg" class="info-message" style="display: none;">¡Excelente! No hay estudiantes morosos actualmente.</p>
+      <main class="content-area">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1>Control de Deudores</h1>
+                <div class="action-buttons">
+                    <button onclick="window.open('http://localhost:3000/api/reportes/deudores/pdf')" style="background-color: #e74c3c; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+                        Generar PDF
+                    </button>
+                    <button onclick="window.open('http://localhost:3000/api/reportes/deudores/excel')" style="background-color: #27ae60; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer;">
+                        Generar Excel
+                    </button>
+                </div>
             </div>
-        </main>
+
+        <div class="user-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align: left">Estudiante</th>
+                <th>Información de la deuda</th>
+                <th style="text-align: left">Total Deuda ($)</th>
+                <th style="text-align: left">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="deudores-table-body">
+              <tr>
+                <td colspan="4" style="text-align: center">Cargando...</td>
+              </tr>
+            </tbody>
+          </table>
+          <p id="no-data-msg" class="info-message" style="display: none">
+            ¡Excelente! No hay estudiantes morosos actualmente.
+          </p>
+        </div>
+      </main>
     </div>
 
-    <div id="student-details-modal" class="modal" style="display:none;">
-        <div class="modal-content large">
-            <span class="close-button" id="close-student-details">&times;</span>
-            <h2 id="details-title">Detalle del Estudiante</h2>
-            <div id="details-body">
-                <section>
-                    <h3>Datos personales</h3>
-                    <div style="display:flex; gap:24px; align-items:flex-start;">
-                        <div style="flex:1; min-width:200px;">
-                            <div style="margin-bottom:8px;"><strong>Nombre:</strong> <span id="det-nombre"></span></div>
-                            <div style="margin-bottom:8px;"><strong>Cédula:</strong> <span id="det-cedula"></span></div>
-                            <div style="margin-bottom:8px;"><strong>Fecha de Nacimiento:</strong> <span id="det-fecha-nac"></span></div>
-                        </div>
-                        <div style="flex:1; min-width:200px;">
-                            <div style="margin-bottom:8px;"><strong>Teléfono:</strong> <span id="det-telefono"></span></div>
-                            <div style="margin-bottom:8px;"><strong>Correo:</strong> <span id="det-correo"></span></div>
-                            <div style="margin-bottom:8px;"><strong>Dirección:</strong> <span id="det-direccion"></span></div>
-                        </div>
-                    </div>
-                </section>
-
-                <section>
-                    <h3>Representante</h3>
-                    <div id="det-representante">No posee representante registrado.</div>
-                </section>
-
-                <section id="section-conceptos-deuda" style="display:none; background:#fff0f0; padding:10px; border-radius:8px; border:1px solid #ffcccc; margin-top:15px;">
-                    <h3 style="color:#c0392b; margin-top:0;">Conceptos Pendientes</h3>
-                    <p id="det-conceptos-lista" style="margin:0; line-height:1.5;"></p>
-                </section>
-
-                <section>
-                    <h3>Historial de Pagos</h3>
-                    <table id="det-pagos-table" style="width:100%; border-collapse:collapse;">
-                        <thead>
-                            <tr style="background:#f9f9f9;">
-                                <th style="padding:8px; border-bottom:1px solid #ddd; text-align: left;">Fecha</th>
-                                <th style="padding:8px; border-bottom:1px solid #ddd; text-align: left;">Concepto</th>
-                                <th style="padding:8px; border-bottom:1px solid #ddd; text-align: left;">Referencia</th>
-                                <th style="padding:8px; border-bottom:1px solid #ddd; text-align: left;">Monto ($)</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </section>
+    <div id="student-details-modal" class="modal" style="display: none">
+      <div class="modal-content large">
+        <span class="close-button" id="close-student-details">&times;</span>
+        <h2 id="details-title">Detalle del Estudiante</h2>
+        <div id="details-body">
+          <section>
+            <h3>Datos personales</h3>
+            <div style="display: flex; gap: 24px; align-items: flex-start">
+              <div style="flex: 1; min-width: 200px">
+                <div style="margin-bottom: 8px">
+                  <strong>Nombre:</strong> <span id="det-nombre"></span>
+                </div>
+                <div style="margin-bottom: 8px">
+                  <strong>Cédula:</strong> <span id="det-cedula"></span>
+                </div>
+                <div style="margin-bottom: 8px">
+                  <strong>Fecha de Nacimiento:</strong>
+                  <span id="det-fecha-nac"></span>
+                </div>
+              </div>
+              <div style="flex: 1; min-width: 200px">
+                <div style="margin-bottom: 8px">
+                  <strong>Teléfono:</strong> <span id="det-telefono"></span>
+                </div>
+                <div style="margin-bottom: 8px">
+                  <strong>Correo:</strong> <span id="det-correo"></span>
+                </div>
+                <div style="margin-bottom: 8px">
+                  <strong>Dirección:</strong> <span id="det-direccion"></span>
+                </div>
+              </div>
             </div>
+          </section>
+
+          <section>
+            <h3>Representante</h3>
+            <div id="det-representante">No posee representante registrado.</div>
+          </section>
+
+          <section
+            id="section-conceptos-deuda"
+            style="
+              display: none;
+              background: #fff0f0;
+              padding: 10px;
+              border-radius: 8px;
+              border: 1px solid #ffcccc;
+              margin-top: 15px;
+            "
+          >
+            <h3 style="color: #c0392b; margin-top: 0">Conceptos Pendientes</h3>
+            <p id="det-conceptos-lista" style="margin: 0; line-height: 1.5"></p>
+          </section>
+
+          <section>
+            <h3>Historial de Cobranza</h3>
+            <div id="det-cobranza-container" style="max-height: 150px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px;">
+                <table id="det-cobranza-table" style="width:100%; border-collapse:collapse; font-size: 0.9em;">
+                    <thead style="position: sticky; top: 0; background: #f9f9f9;">
+                        <tr>
+                            <th style="padding:6px; border-bottom:1px solid #ddd; text-align: left;">Fecha</th>
+                            <th style="padding:6px; border-bottom:1px solid #ddd; text-align: left;">Medio</th>
+                            <th style="padding:6px; border-bottom:1px solid #ddd; text-align: left;">Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+          </section>
+
+          <section>
+            <h3>Historial de Pagos</h3>
+            <table
+              id="det-pagos-table"
+              style="width: 100%; border-collapse: collapse"
+            >
+              <thead>
+                <tr style="background: #f9f9f9">
+                  <th
+                    style="
+                      padding: 8px;
+                      border-bottom: 1px solid #ddd;
+                      text-align: left;
+                    "
+                  >
+                    Fecha
+                  </th>
+                  <th
+                    style="
+                      padding: 8px;
+                      border-bottom: 1px solid #ddd;
+                      text-align: left;
+                    "
+                  >
+                    Concepto
+                  </th>
+                  <th
+                    style="
+                      padding: 8px;
+                      border-bottom: 1px solid #ddd;
+                      text-align: left;
+                    "
+                  >
+                    Referencia
+                  </th>
+                  <th
+                    style="
+                      padding: 8px;
+                      border-bottom: 1px solid #ddd;
+                      text-align: left;
+                    "
+                  >
+                    Monto ($)
+                  </th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </section>
         </div>
+      </div>
+    </div>
+
+    <!-- Modal para Registrar Cobro -->
+    <div id="cobro-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 600px; width: 90%;">
+            <span class="close-button" id="close-cobro-modal">&times;</span>
+            <h2>Registrar Solicitud de Cobro</h2>
+
+        <div id="cobro-form-container">
+          <div class="form-group">
+            <label for="cobro-medio">Medio de cobro:</label>
+            <select id="cobro-medio" onchange="generarMensaje()">
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Email">Email</option>
+              <option value="Llamada">Llamada</option>
+              <option value="En persona">En persona</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="mensaje-sugerido-group">
+            <label for="cobro-mensaje">Mensaje sugerido / Guía:</label>
+            <textarea
+              id="cobro-mensaje"
+              rows="6"
+              readonly
+              style="
+                width: 100%;
+                background: #f9f9f9;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+              "
+            ></textarea>
+            <button
+              type="button"
+              onclick="copiarMensaje()"
+              style="margin-top: 5px; padding: 5px 10px; cursor: pointer"
+            >
+              Copiar Texto
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label for="cobro-notas">Respuesta / Notas:</label>
+            <textarea
+              id="cobro-notas"
+              rows="3"
+              placeholder="Respuesta del estudiante/representante..."
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+              "
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="cobro-fecha">Fecha de cobro:</label>
+            <input
+              type="date"
+              id="cobro-fecha"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+              "
+            />
+          </div>
+
+          <div style="margin-top: 20px; text-align: right">
+            <button
+              onclick="cerrarModalCobro()"
+              style="
+                padding: 10px 20px;
+                background: #ccc;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-right: 10px;
+              "
+            >
+              Cancelar
+            </button>
+            <button
+              onclick="guardarCobro()"
+              style="
+                padding: 10px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+              "
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="../../public/js/menu.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const tableBody = document.getElementById('deudores-table-body');
-            const noDataMsg = document.getElementById('no-data-msg');
-            
-            // Configuración del Modal
-            const modal = document.getElementById('student-details-modal');
-            const closeBtn = document.getElementById('close-student-details');
+      document.addEventListener("DOMContentLoaded", async () => {
+        const tableBody = document.getElementById("deudores-table-body");
+        const noDataMsg = document.getElementById("no-data-msg");
 
-            if(closeBtn) {
-                closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
-            }
-            
-            // Cerrar modal al hacer clic fuera
-            window.onclick = function(event) {
-                if (event.target == modal) {
-                    modal.style.display = "none";
-                }
-            }
+        // Configuración del Modal
+        const modal = document.getElementById("student-details-modal");
+        const closeBtn = document.getElementById("close-student-details");
 
-            // Cargar lista de deudores
-            try {
-                const res = await fetch('http://localhost:3000/api/estudiantes/listado/morosos');
-                const data = await res.json();
+        if (closeBtn) {
+          closeBtn.addEventListener("click", () => {
+            modal.style.display = "none";
+          });
+        }
 
-                tableBody.innerHTML = '';
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function (event) {
+          if (event.target == modal) {
+            modal.style.display = "none";
+          }
+        };
 
-                if (data.success && data.deudores.length > 0) {
-                    noDataMsg.style.display = 'none';
-                    
-                    data.deudores.forEach(d => {
-                        const row = document.createElement('tr');
-                        
-                        // Preparamos la lista de conceptos (separados por <br>) para enviarla al modal
-                        const conceptosRaw = d.Meses_Deuda || 'Sin detalles';
-                        const conceptosHtml = conceptosRaw.split(', ').map(c => `• ${c}`).join('<br>');
+        // Cargar lista de deudores
+        try {
+          const res = await fetch(
+            "http://localhost:3000/api/estudiantes/listado/morosos"
+          );
+          const data = await res.json();
 
-                        // IMPORTANTE: Escapamos comillas simples para que el onclick no falle
-                        const safeConceptos = conceptosHtml.replace(/'/g, "\\'");
+          tableBody.innerHTML = "";
 
-                        row.innerHTML = `
+          if (data.success && data.deudores.length > 0) {
+            noDataMsg.style.display = "none";
+
+            data.deudores.forEach((d) => {
+              const row = document.createElement("tr");
+
+              // Preparamos la lista de conceptos (separados por <br>) para enviarla al modal
+              const conceptosRaw = d.Meses_Deuda || "Sin detalles";
+              const conceptosHtml = conceptosRaw
+                .split(", ")
+                .map((c) => `• ${c}`)
+                .join("<br>");
+
+              // IMPORTANTE: Escapamos comillas simples para que el onclick no falle
+              const safeConceptos = conceptosHtml.replace(/'/g, "\\'");
+
+              row.innerHTML = `
                             <td class="clickable-name" onclick="verDetalles(${d.idEstudiante}, '${safeConceptos}')">
                                 ${d.Nombres} ${d.Apellidos}
                             </td>
@@ -150,115 +356,336 @@
                             <td class="debt-amount">$${d.Deuda_Total}</td>
                             <td>
                                 <button class="btn-pay" onclick="irAPagar(${d.idEstudiante})">Registrar Pago</button>
+                                <button class="btn-pay" style="background-color: #e67e22; margin-left: 5px;" onclick="abrirModalCobro(${d.idEstudiante})">Registrar Cobro</button>
                             </td>
                         `;
-                        tableBody.appendChild(row);
-                    });
-                } else {
-                    noDataMsg.style.display = 'block';
-                }
-            } catch (error) {
-                console.error(error);
-                tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error al cargar datos</td></tr>';
-            }
-        });
-
-        function irAPagar(id) {
-            window.location.href = `registrar_pago.html?studentId=${id}`;
+              tableBody.appendChild(row);
+            });
+          } else {
+            noDataMsg.style.display = "block";
+          }
+        } catch (error) {
+          console.error(error);
+          tableBody.innerHTML =
+            '<tr><td colspan="4" style="text-align:center; color:red;">Error al cargar datos</td></tr>';
         }
+      });
 
-        // Función para abrir el modal y cargar detalles
-        async function verDetalles(id, conceptosHtml) {
-            try {
-                const res = await fetch(`http://localhost:3000/api/estudiantes/${id}`);
-                const data = await res.json();
+      function irAPagar(id) {
+        window.location.href = `registrar_pago.html?studentId=${id}`;
+      }
 
-                if (!data.success) {
-                    alert('Error al cargar detalles');
-                    return;
-                }
+      // Función para abrir el modal y cargar detalles
+      async function verDetalles(id, conceptosHtml) {
+        try {
+          const res = await fetch(
+            `http://localhost:3000/api/estudiantes/${id}`
+          );
+          const data = await res.json();
 
-                const est = data.estudiante;
-                const rep = data.representante;
+          if (!data.success) {
+            alert("Error al cargar detalles");
+            return;
+          }
 
-                // Llenar Datos Personales
-                document.getElementById('det-nombre').textContent = `${est.Nombres} ${est.Apellidos}`;
-                document.getElementById('det-cedula').textContent = est.Cedula || 'N/A';
-                let fechaNac = est.Fecha_Nacimiento ? new Date(est.Fecha_Nacimiento).toISOString().split('T')[0] : 'N/A';
-                document.getElementById('det-fecha-nac').textContent = fechaNac;
-                document.getElementById('det-telefono').textContent = est.Telefono || 'N/A';
-                document.getElementById('det-correo').textContent = est.Correo || 'N/A';
-                document.getElementById('det-direccion').textContent = est.Direccion || 'N/A';
+          const est = data.estudiante;
+          const rep = data.representante;
 
-                // Llenar Datos del Representante
-                const repContainer = document.getElementById('det-representante');
-                if (rep) {
-                    repContainer.innerHTML = `
+          // Llenar Datos Personales
+          document.getElementById(
+            "det-nombre"
+          ).textContent = `${est.Nombres} ${est.Apellidos}`;
+          document.getElementById("det-cedula").textContent =
+            est.Cedula || "N/A";
+          let fechaNac = est.Fecha_Nacimiento
+            ? new Date(est.Fecha_Nacimiento).toISOString().split("T")[0]
+            : "N/A";
+          document.getElementById("det-fecha-nac").textContent = fechaNac;
+          document.getElementById("det-telefono").textContent =
+            est.Telefono || "N/A";
+          document.getElementById("det-correo").textContent =
+            est.Correo || "N/A";
+          document.getElementById("det-direccion").textContent =
+            est.Direccion || "N/A";
+
+          // Llenar Datos del Representante
+          const repContainer = document.getElementById("det-representante");
+          if (rep) {
+            repContainer.innerHTML = `
                         <div style="background:#f9f9f9; padding:10px; border-radius:6px; border:1px solid #eee;">
-                            <strong>${rep.Nombres} ${rep.Apellidos}</strong> (${rep.Parentesco})<br>
+                            <strong>${rep.Nombres} ${rep.Apellidos}</strong> (${
+              rep.Parentesco
+            })<br>
                             Cédula: ${rep.Cedula}<br>
-                            Teléfonos: ${rep.Telefonos || 'N/A'}<br>
-                            Correo: ${rep.Correo || 'N/A'}
+                            Teléfonos: ${rep.Telefonos || "N/A"}<br>
+                            Correo: ${rep.Correo || "N/A"}
                         </div>
                     `;
-                } else {
-                    repContainer.innerHTML = '<span style="color:#888; font-style:italic;">No requiere / No registrado</span>';
-                }
+          } else {
+            repContainer.innerHTML =
+              '<span style="color:#888; font-style:italic;">No requiere / No registrado</span>';
+          }
 
-                // Llenar Conceptos Pendientes (con estilo para "Parcial")
-                const deudaSection = document.getElementById('section-conceptos-deuda');
-                const listaConceptos = document.getElementById('det-conceptos-lista');
-                
-                if (conceptosHtml) {
-                    deudaSection.style.display = 'block';
-                    // Detectamos la palabra "(Parcial)" y le ponemos color
-                    const htmlConEstilo = conceptosHtml.replace(
-                        /\(Parcial\)/g, 
-                        '<span style="color:#d35400; font-weight:bold;">(Parcial)</span>'
-                    );
-                    listaConceptos.innerHTML = htmlConEstilo;
-                } else {
-                    deudaSection.style.display = 'none';
-                }
+          // Llenar Conceptos Pendientes (con estilo para "Parcial")
+          const deudaSection = document.getElementById(
+            "section-conceptos-deuda"
+          );
+          const listaConceptos = document.getElementById("det-conceptos-lista");
 
-                // Llenar Tabla de Historial de Pagos
-                const pagosTable = document.querySelector('#det-pagos-table tbody');
-                pagosTable.innerHTML = '';
-                
-                if (data.pagos && data.pagos.length > 0) {
-                    // Mostramos los últimos 5 pagos
-                    data.pagos.slice(0, 5).forEach(p => {
-                        const fechaPago = new Date(p.Fecha_pago).toLocaleDateString();
-                        
-                        // Nombre del concepto base
-                        let conceptoDisplay = p.Concepto_Pagado || 'Abono / Otro';
+          if (conceptosHtml) {
+            deudaSection.style.display = "block";
+            // Detectamos la palabra "(Parcial)" y le ponemos color
+            const htmlConEstilo = conceptosHtml.replace(
+              /\(Parcial\)/g,
+              '<span style="color:#d35400; font-weight:bold; font-size:0.9em;">(Parcial)</span>'
+            );
+            listaConceptos.innerHTML = htmlConEstilo;
+          } else {
+            deudaSection.style.display = "none";
+          }
 
-                        // Si es un pago parcial, le agregamos la etiqueta con el monto
-                        if (p.Es_Parcial > 0) {
-                            conceptoDisplay += ` <span style="color:#d35400; font-weight:bold; font-size:0.9em;">(Parcial $${Number(p.Monto_usd).toFixed(2)})</span>`;
-                        }
+          // Llenar Tabla de Historial de Pagos
+          const pagosTable = document.querySelector("#det-pagos-table tbody");
+          pagosTable.innerHTML = "";
 
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
+          if (data.pagos && data.pagos.length > 0) {
+            // Mostramos los últimos 5 pagos
+            data.pagos.slice(0, 5).forEach((p) => {
+              const fechaPago = new Date(p.Fecha_pago).toLocaleDateString();
+
+              // Nombre del concepto base
+              let conceptoDisplay = p.Concepto_Pagado || "Abono / Otro";
+
+              // Si es un pago parcial, le agregamos la etiqueta con el monto
+              if (p.Es_Parcial > 0) {
+                conceptoDisplay += ` <span style="color:#d35400; font-weight:bold; font-size:0.9em;">(Parcial $${Number(
+                  p.Monto_usd
+                ).toFixed(2)})</span>`;
+              }
+
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
                             <td style="padding:8px; border-bottom:1px solid #eee;">${fechaPago}</td>
                             <td style="padding:8px; border-bottom:1px solid #eee;">${conceptoDisplay}</td>
-                            <td style="padding:8px; border-bottom:1px solid #eee;">${p.Referencia || 'N/A'}</td>
-                            <td style="padding:8px; border-bottom:1px solid #eee;">$${p.Monto_usd}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${
+                              p.Referencia || "N/A"
+                            }</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">$${
+                              p.Monto_usd
+                            }</td>
                         `;
-                        pagosTable.appendChild(tr);
-                    });
-                } else {
-                    pagosTable.innerHTML = '<tr><td colspan="4" style="padding:10px; text-align:center; color:#777;">No hay pagos registrados</td></tr>';
-                }
+              pagosTable.appendChild(tr);
+            });
+          } else {
+            pagosTable.innerHTML =
+              '<tr><td colspan="4" style="padding:10px; text-align:center; color:#777;">No hay pagos registrados</td></tr>';
+          }
 
-                // Mostrar el modal
-                document.getElementById('student-details-modal').style.display = 'flex';
+          // Llenar Historial de Cobranza
+          const cobranzaTable = document.querySelector('#det-cobranza-table tbody');
+          cobranzaTable.innerHTML = '';
 
-            } catch (err) {
-                console.error(err);
-                alert('Error de conexión al obtener detalles');
-            }
+          if (data.solicitudes && data.solicitudes.length > 0) {
+              data.solicitudes.forEach(s => {
+                  const fecha = new Date(s.Fecha_Solicitud).toLocaleDateString();
+                  const tr = document.createElement('tr');
+                  tr.innerHTML = `
+                      <td style="padding:6px; border-bottom:1px solid #eee;">${fecha}</td>
+                      <td style="padding:6px; border-bottom:1px solid #eee;">${s.Tipo_Solicitud}</td>
+                      <td style="padding:6px; border-bottom:1px solid #eee;">${s.Notas || '-'}</td>
+                  `;
+                  cobranzaTable.appendChild(tr);
+              });
+          } else {
+              cobranzaTable.innerHTML = '<tr><td colspan="3" style="padding:10px; text-align:center; color:#777;">No hay registros de cobranza</td></tr>';
+          }
+          // Mostrar el modal
+          document.getElementById("student-details-modal").style.display =
+            "flex";
+        } catch (err) {
+          console.error(err);
+          alert("Error de conexión al obtener detalles");
         }
+      }
+
+      // --- LÓGICA PARA REGISTRAR COBRO ---
+      let currentStudentForCobro = null;
+      let currentStudentData = null;
+
+      const modalCobro = document.getElementById("cobro-modal");
+      const closeCobroBtn = document.getElementById("close-cobro-modal");
+
+      if (closeCobroBtn) {
+        closeCobroBtn.addEventListener("click", cerrarModalCobro);
+      }
+
+      function cerrarModalCobro() {
+        modalCobro.style.display = "none";
+        currentStudentForCobro = null;
+        currentStudentData = null;
+      }
+
+      async function abrirModalCobro(id) {
+        currentStudentForCobro = id;
+
+        // Establecer fecha de hoy por defecto
+        document.getElementById("cobro-fecha").value = new Date()
+          .toISOString()
+          .split("T")[0];
+        document.getElementById("cobro-notas").value = "";
+
+        try {
+          // Obtenemos datos del estudiante para saber si es menor de edad y sus deudas
+          const res = await fetch(
+            `http://localhost:3000/api/estudiantes/${id}`
+          );
+          const data = await res.json();
+
+          if (data.success) {
+            currentStudentData = data;
+            generarMensaje(); // Generar mensaje inicial
+            modalCobro.style.display = "flex";
+          } else {
+            alert("No se pudieron cargar los datos del estudiante");
+          }
+        } catch (error) {
+          console.error(error);
+          alert("Error al cargar datos del estudiante");
+        }
+      }
+
+      function calcularEdad(fechaNac) {
+        if (!fechaNac) return 18; // Default a mayor si no hay fecha
+        const hoy = new Date();
+        const fecha = new Date(fechaNac);
+        let edad = hoy.getFullYear() - fecha.getFullYear();
+        const m = hoy.getMonth() - fecha.getMonth();
+        if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) {
+          edad--;
+        }
+        return edad;
+      }
+
+      function generarMensaje() {
+        if (!currentStudentData) return;
+
+            const medio = document.getElementById('cobro-medio').value;
+            const mensajeArea = document.getElementById('cobro-mensaje');
+            const mensajeGroup = document.getElementById('mensaje-sugerido-group'); // Get the container group
+
+            // Hide/Show message field logic
+            if (medio === 'En persona') {
+                mensajeGroup.style.display = 'none';
+            } else {
+                mensajeGroup.style.display = 'block';
+            }
+
+            const est = currentStudentData.estudiante;
+        const rep = currentStudentData.representante;
+        const deudas = currentStudentData.deudas || [];
+
+        // Calcular deuda total pendiente
+        const totalDeuda = deudas.reduce((acc, d) => {
+          const monto = Number(d.Monto_usd);
+          const pagado = Number(d.Total_Pagado || 0);
+          return acc + (monto - pagado);
+        }, 0);
+
+        const edad = calcularEdad(est.Fecha_Nacimiento);
+        const esMenor = edad < 18;
+
+        // Determinar a quién nos dirigimos
+        let nombreDestinatario = est.Nombres;
+        let saludo = `Hola ${est.Nombres}`;
+
+        if (esMenor && rep) {
+          nombreDestinatario = rep.Nombres;
+          saludo = `Hola Sr(a). ${rep.Nombres} ${rep.Apellidos}, representante de ${est.Nombres}`;
+        } else if (esMenor && !rep) {
+          // Caso borde: es menor pero no tiene representante registrado
+          saludo = `Hola representante de ${est.Nombres}`;
+        }
+
+        let texto = "";
+
+        if (medio === "WhatsApp" || medio === "Email") {
+          texto = `${saludo}, esperamos que se encuentre bien.\n\n`;
+          texto += `Le escribimos de Just Talk Academy para recordarle amablemente que tiene un saldo pendiente de $${totalDeuda.toFixed(
+            2
+          )} correspondiente a sus mensualidades/inscripción.\n\n`;
+          texto += `Agradecemos pueda regularizar su pago a la brevedad posible. Si ya realizó el pago, por favor envíenos el comprobante.\n\n`;
+          texto += `Saludos cordiales,\nAdministración Just Talk Academy.`;
+        } else if (medio === "Llamada") {
+          texto = `GUÍA PARA LLAMADA:\n\n`;
+          texto += `1. Saludar: "Buenos días/tardes, ¿hablo con ${nombreDestinatario}?"\n`;
+          texto += `2. Identificarse: "Le llama [Tu Nombre] de Just Talk Academy."\n`;
+          texto += `3. Motivo: "El motivo de la llamada es para recordarle sobre el saldo pendiente de $${totalDeuda.toFixed(
+            2
+          )} del estudiante ${est.Nombres}."\n`;
+          texto += `4. Acordar: "¿Cuándo cree que podría realizar el pago?"\n`;
+          texto += `5. Despedida: "Muchas gracias, que tenga buen día."`;
+        } else {
+          texto =
+            "Registro de cobro en persona. No requiere mensaje automático.";
+        }
+
+        mensajeArea.value = texto;
+      }
+
+      function copiarMensaje() {
+        const copyText = document.getElementById("cobro-mensaje");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyText.value);
+        alert("Texto copiado al portapapeles");
+      }
+
+      async function guardarCobro() {
+        if (!currentStudentForCobro) return;
+
+        const medio = document.getElementById("cobro-medio").value;
+        const notas = document.getElementById("cobro-notas").value;
+        const fecha = document.getElementById("cobro-fecha").value;
+
+        if (!fecha) {
+          alert("Por favor seleccione una fecha");
+          return;
+        }
+
+        const payload = {
+          Tipo_Solicitud: medio,
+          Fecha_Solicitud: fecha,
+          Notas: notas,
+        };
+
+        try {
+          const res = await fetch(
+            `http://localhost:3000/api/estudiantes/${currentStudentForCobro}/solicitudes`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
+            }
+          );
+
+          const data = await res.json();
+
+          if (data.success) {
+            alert("Cobro registrado exitosamente");
+            cerrarModalCobro();
+          } else {
+            alert(
+              "Error al registrar cobro: " +
+                (data.message || "Error desconocido")
+            );
+          }
+        } catch (error) {
+          console.error(error);
+          alert("Error de conexión al guardar");
+        }
+      }
     </script>
-</body>
+  </body>
 </html>

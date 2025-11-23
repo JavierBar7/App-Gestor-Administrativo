@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch('http://localhost:3000/api/tasa/latest');
             if (res.ok) {
                 const data = await res.json();
-                if (data.success && data.rate) document.getElementById('tasa-input').value = data.rate.Tasa_usd_a_bs;
+                if (data.success && data.rate) document.getElementById('tasa-input').value = Number(data.rate.Tasa_usd_a_bs).toFixed(2);
             }
         } catch (err) { console.error(err); }
     }
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             body.innerHTML = '';
             data.historial.forEach(h => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td style="padding:6px">${h.Fecha_Registro.slice(0,10)}</td><td style="text-align:right">${h.Tasa_Registrada}</td>`;
+                tr.innerHTML = `<td style="padding:6px">${h.Fecha_Registro.slice(0,10)}</td><td style="text-align:right">${Number(h.Tasa_Registrada).toFixed(2)}</td>`;
                 body.appendChild(tr);
             });
         });

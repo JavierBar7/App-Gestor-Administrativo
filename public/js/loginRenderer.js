@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await window.electronAPI.loginAttempt(username, password);
 
             if (result.success) {
-                window.electronAPI.navigateToDashboard(result.role);
+                window.electronAPI.navigateToEstudiantes();
             } else {
                 // mostrar mensaje en el span de error y en un toast
                 const msg = result.message || 'Usuario o contraseña incorrectos';

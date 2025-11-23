@@ -5,6 +5,7 @@ const { spawn } = require('child_process');
 const axios = require('axios');
 
 let serverProcess; // referencia para poder cerrar el servidor luego
+let userRole = null; // Store user's idRol globally
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -60,6 +61,13 @@ app.on('activate', () => {
 ipcMain.handle('login-attempt', async (event, username, password) => {
     try {
         const response = await axios.post('http://localhost:3000/api/auth/login', { username, password });
+        console.log('Login response:', response.data); // Debug log
+        if (response.data.success && response.data.idRol) {
+            userRole = response.data.idRol; // Store role globally
+            console.log('Stored userRole:', userRole); // Debug log
+        } else {
+            console.log('No idRol in response or login failed'); // Debug log
+        }
         return response.data;
     } catch (error) {
         // Si el servidor respondió con un error 5xx/4xx, devolver el cuerpo de la respuesta
@@ -72,6 +80,12 @@ ipcMain.handle('login-attempt', async (event, username, password) => {
     }
 });
 
+// Get user role (for frontend to check permissions)
+ipcMain.handle('get-user-role', () => {
+    console.log('get-user-role called, returning:', userRole); // Debug log
+    return userRole;
+});
+
 // 🔄 Redirección a dashboard
 ipcMain.on('navigate-dashboard', (event, role) => {
     const win = BrowserWindow.getFocusedWindow();
@@ -81,6 +95,7 @@ ipcMain.on('navigate-dashboard', (event, role) => {
 });
 
 ipcMain.on('logout', (event) => {
+    userRole = null; // Clear role on logout
     const win = BrowserWindow.getFocusedWindow();
     if (win) {
         win.loadFile(path.join(__dirname, 'src/views/login.html')); // 👈 vuelve al login
