@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnAddUser.addEventListener('click', () => {
             addUserForm.reset();
             addUserError.textContent = '';
-            addUserModal.style.display = 'block';
+            addUserModal.style.display = 'flex';
         });
     }
 
