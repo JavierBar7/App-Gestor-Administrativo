@@ -1,41 +1,75 @@
-// Funcionalidad de búsqueda para grupos en vista de Estudiantes
+// Funcionalidad de búsqueda mejorada para estudiantes y grupos
 document.addEventListener('DOMContentLoaded', () => {
-    // Crear el input de búsqueda si no existe
-    const addStudentBtn = document.getElementById('add-student-btn');
-    if (addStudentBtn && !document.getElementById('search-grupos')) {
-        const searchContainer = document.createElement('div');
-        searchContainer.style.cssText = 'margin: 12px 0; display: flex; gap: 9rem; align-items: center;';
-        
-        const searchInput = document.createElement('input');
-        searchInput.type = 'text';
-        searchInput.id = 'search-grupos';
-        searchInput.placeholder = 'Buscar grupos por nombre o curso...';
-        searchInput.style.cssText = 'flex: 1; max-width: 60%; padding: 10px 15px; border: 1.5px solid #e0e0e0; border-radius: 8px; font-size: 14px; transition: all 0.2s ease;';
-        
+    const searchInput = document.getElementById('search-grupos');
+
+    if (searchInput) {
+        // Estilos de foco
         searchInput.addEventListener('focus', function() {
             this.style.borderColor = '#2196f3';
             this.style.boxShadow = '0 0 0 3px rgba(33, 150, 243, 0.1)';
         });
         
         searchInput.addEventListener('blur', function() {
-            this.style.borderColor = '#e0e0e0';
+            this.style.borderColor = '#ddd';
             this.style.boxShadow = 'none';
         });
         
-        // Funcionalidad de filtrado
+        // Funcionalidad de filtrado mejorada
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
-            const cards = document.querySelectorAll('.group-card');
             
+            // Filtrar en Vista de Tarjetas (grupos)
+            const cards = document.querySelectorAll('.group-card');
             cards.forEach(card => {
                 const text = card.textContent.toLowerCase();
                 card.style.display = text.includes(query) ? '' : 'none';
             });
+
+            // Filtrar en Vista de Lista (estudiantes agrupados)
+            const listSections = document.querySelectorAll('#all-students-list > div');
+            listSections.forEach(section => {
+                // Buscar en el nombre del grupo (header)
+                const groupHeader = section.querySelector('h3');
+                const groupName = groupHeader ? groupHeader.textContent.toLowerCase() : '';
+                
+                // Buscar en los nombres de estudiantes (filas de la tabla)
+                const studentRows = section.querySelectorAll('tbody tr');
+                let hasVisibleStudents = false;
+                
+                studentRows.forEach(row => {
+                    const studentName = row.querySelector('.student-name');
+                    const studentText = studentName ? studentName.textContent.toLowerCase() : '';
+                    
+                    // Mostrar fila si coincide con el nombre del estudiante o del grupo
+                    if (studentText.includes(query) || groupName.includes(query)) {
+                        row.style.display = '';
+                        hasVisibleStudents = true;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Mostrar/ocultar toda la sección del grupo
+                // Si hay estudiantes visibles O si el nombre del grupo coincide, mostrar la sección
+                if (hasVisibleStudents || groupName.includes(query) || query === '') {
+                    section.style.display = '';
+                } else {
+                    section.style.display = 'none';
+                }
+            });
+
+            // Filtrar en Vista de Grupo Individual (tabla de estudiantes de un grupo específico)
+            const singleGroupRows = document.querySelectorAll('#students-table-body tr');
+            singleGroupRows.forEach(row => {
+                const studentName = row.querySelector('.student-name');
+                const studentText = studentName ? studentName.textContent.toLowerCase() : '';
+                
+                if (studentText.includes(query) || query === '') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         });
-        
-        const parentDiv = addStudentBtn.parentElement;
-        searchContainer.appendChild(searchInput);
-        searchContainer.appendChild(addStudentBtn);
-        parentDiv.replaceWith(searchContainer);
     }
 });

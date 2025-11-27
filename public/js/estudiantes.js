@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let metodosCache = [];
     let gruposCache = [];
     let selectedGrupos = []; // IDs de grupos seleccionados
+    let currentView = 'cards'; // 'cards' or 'list'
 
     // --- FUNCIONES AUXILIARES ---
     function calcularEdad(fechaStr) {
@@ -192,6 +193,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- RENDERIZADO DE ESTUDIANTES ---
+
+    function createStudentRow(s) {
+        try {
+            const tr = document.createElement('tr');
+            let edadDisplay = (s.edad !== null && s.edad !== undefined) ? s.edad : '—';
+
+            // Último Pago
+            let lastPayDisplay = '—';
+            if (s.lastPayment) {
+                const p = s.lastPayment;
+                const metodo = p.Metodo || 'Pago';
+                const monto = formatMoney(p.Monto_usd, 'USD'); 
+                const mes = formatMes(p.Mes_Pagado, p.Fecha_pago);
+                const mesStr = mes ? `(${mes})` : '';
+                lastPayDisplay = `<strong>${metodo}:</strong> $${monto} <small>${mesStr}</small>`;
+            }
+
+            // Deuda
+            let debtDisplay = '<span class="badge-status badge-deuda">Deuda</span>';
+            const deudaTotal = Number(s.pendingDebt);
+            if (deudaTotal <= 0.01) {
+                debtDisplay = '<span class="badge-status badge-solvente">Solvente</span>';
+            } else {
+                debtDisplay = '<span class="badge-status badge-deuda">Deuda</span>';
+            }
+
+            tr.innerHTML = `
+                <td class="student-name" data-id="${s.idEstudiante}" style="cursor:pointer;color:blue;text-decoration:underline;">${s.Nombres || ''} ${s.Apellidos || ''}</td>
+                <td>${edadDisplay}</td>
+                <td>${lastPayDisplay}</td>
+                <td style="text-align:center;">${debtDisplay}</td>
+                <td>
+                    <button class="edit-student" data-id="${s.idEstudiante}">Editar</button>
+                    <button class="register-payment" data-id="${s.idEstudiante}" style="margin-left:8px;">Registrar Pago</button>
+                </td>
+            `;
+
+            // Event Listeners for the row
+            tr.querySelector('.student-name').addEventListener('click', async () => {
+                await openStudentDetails(s.idEstudiante);
+            });
+
+            tr.querySelector('.register-payment').addEventListener('click', (ev) => {
+                ev.preventDefault();
+                window.location.href = `registrar_pago.html?studentId=${s.idEstudiante}`;
+            });
+
+            tr.querySelector('.edit-student').addEventListener('click', () => openEditStudentModal(s.idEstudiante));
+
+            return tr;
+        } catch (rowErr) { 
+            console.error(rowErr); 
+            return null;
+        }
+    }
+
     async function renderStudentsForGroup(idGrupo, groupName) {
         try {
             const res = await fetch(`http://localhost:3000/api/grupos/${idGrupo}/estudiantes`);
@@ -208,71 +265,103 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 noMsg.style.display = 'none';
                 students.forEach(s => {
-                    try {
-                        const tr = document.createElement('tr');
-                        let edadDisplay = (s.edad !== null && s.edad !== undefined) ? s.edad : '—';
-
-                        // Último Pago
-                        let lastPayDisplay = '—';
-                        if (s.lastPayment) {
-                            const p = s.lastPayment;
-                            const metodo = p.Metodo || 'Pago';
-                            const monto = formatMoney(p.Monto_usd, 'USD'); // Usando nueva función
-                            const mes = formatMes(p.Mes_Pagado, p.Fecha_pago);
-                            const mesStr = mes ? `(${mes})` : '';
-                            lastPayDisplay = `<strong>${metodo}:</strong> $${monto} <small>${mesStr}</small>`;
-                        }
-
-                        // Deuda
-                        let debtDisplay = '<span class="badge-status badge-deuda">Deuda</span>';
-                        const deudaTotal = Number(s.pendingDebt);
-                        if (deudaTotal <= 0.01) {
-                            debtDisplay = '<span class="badge-status badge-solvente">Solvente</span>';
-                        } else {
-                            debtDisplay = '<span class="badge-status badge-deuda">Deuda</span>';
-                        }
-
-                        tr.innerHTML = `
-                            <td class="student-name" data-id="${s.idEstudiante}" style="cursor:pointer;color:blue;text-decoration:underline;">${s.Nombres || ''} ${s.Apellidos || ''}</td>
-                            <td>${edadDisplay}</td>
-                            <td>${lastPayDisplay}</td>
-                            <td style="text-align:center;">${debtDisplay}</td>
-                            <td>
-                                <button class="edit-student" data-id="${s.idEstudiante}">Editar</button>
-                                <button class="register-payment" data-id="${s.idEstudiante}" style="margin-left:8px;">Registrar Pago</button>
-                            </td>
-                        `;
-                        studentsTbody.appendChild(tr);
-                    } catch (rowErr) { console.error(rowErr); }
-                });
-
-                // Click en nombre: Detalles
-                studentsTbody.querySelectorAll('.student-name').forEach(cell => {
-                    cell.addEventListener('click', async (e) => {
-                        const id = cell.getAttribute('data-id');
-                        await openStudentDetails(id);
-                    });
-                });
-
-                // Botones Acción
-                studentsTbody.querySelectorAll('.register-payment').forEach(btn => {
-                    btn.addEventListener('click', (ev) => {
-                        ev.preventDefault();
-                        window.location.href = `registrar_pago.html?studentId=${btn.getAttribute('data-id')}`;
-                    });
-                });
-
-                studentsTbody.querySelectorAll('.edit-student').forEach(btn => {
-                    btn.addEventListener('click', () => openEditStudentModal(btn.getAttribute('data-id')));
+                    const tr = createStudentRow(s);
+                    if (tr) studentsTbody.appendChild(tr);
                 });
             }
 
             currentGroupId = idGrupo;
             currentGroupName = groupName;
             document.getElementById('grupos-cards').style.display = 'none';
+            document.getElementById('all-students-list').style.display = 'none'; // Ensure list view is hidden
             grupoStudentsEl.style.display = 'block';
             document.getElementById('grupo-students-title').textContent = `Estudiantes — ${groupName || ''}`;
+            
+            // Ensure back button works for single group view
+            document.getElementById('back-to-groups').style.display = 'inline-block';
+
         } catch (err) { console.error(err); }
+    }
+
+    async function renderAllStudentsList() {
+        const listContainer = document.getElementById('all-students-list');
+        listContainer.innerHTML = '<p style="text-align:center; padding:20px;">Cargando lista completa...</p>';
+        
+        try {
+            // Ensure groups are loaded
+            if (!gruposCache || gruposCache.length === 0) {
+                await loadGrupos();
+            }
+
+            listContainer.innerHTML = ''; // Clear loading
+
+            if (gruposCache.length === 0) {
+                listContainer.innerHTML = '<p>No hay grupos disponibles.</p>';
+                return;
+            }
+
+            for (const group of gruposCache) {
+                // Create Section for Group
+                const section = document.createElement('div');
+                section.className = 'group-section';
+                section.style.marginBottom = '30px';
+                section.style.background = '#fff';
+                section.style.padding = '15px';
+                section.style.borderRadius = '8px';
+                section.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)';
+
+                const header = document.createElement('h3');
+                header.textContent = `${group.Nombre_Grupo} (${group.Nombre_Curso || ''})`;
+                header.style.borderBottom = '2px solid #eee';
+                header.style.paddingBottom = '10px';
+                header.style.marginBottom = '15px';
+                header.style.color = '#333';
+                section.appendChild(header);
+
+                // Fetch students for this group
+                const res = await fetch(`http://localhost:3000/api/grupos/${group.idGrupo}/estudiantes`);
+                const students = await res.json();
+
+                if (students && students.length > 0) {
+                    const tableContainer = document.createElement('div');
+                    tableContainer.className = 'user-table-container';
+                    
+                    const table = document.createElement('table');
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Edad</th>
+                                <th>Último pago realizado</th>
+                                <th style="text-align: center;">Estado</th> <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    `;
+                    
+                    const tbody = table.querySelector('tbody');
+                    students.forEach(s => {
+                        const tr = createStudentRow(s);
+                        if (tr) tbody.appendChild(tr);
+                    });
+
+                    tableContainer.appendChild(table);
+                    section.appendChild(tableContainer);
+                } else {
+                    const noData = document.createElement('p');
+                    noData.textContent = 'No hay estudiantes en este grupo.';
+                    noData.style.color = '#777';
+                    noData.style.fontStyle = 'italic';
+                    section.appendChild(noData);
+                }
+
+                listContainer.appendChild(section);
+            }
+
+        } catch (err) {
+            console.error(err);
+            listContainer.innerHTML = '<p style="color:red;">Error cargando la lista de estudiantes.</p>';
+        }
     }
 
     // --- MODAL DETALLES MODERNO ---
@@ -500,20 +589,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (closeTasaHistBtn) closeTasaHistBtn.addEventListener('click', () => tasaHistModal.style.display = 'none');
 
-
-    // --- INICIALIZACIÓN Y EVENTOS PRINCIPALES ---
-    
-    if (logoutBtn) logoutBtn.addEventListener('click', () => window.electronAPI.logout());
-    
-    const backToGroupsBtn = document.getElementById('back-to-groups');
-    if (backToGroupsBtn) backToGroupsBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('grupo-students').style.display = 'none';
-        document.getElementById('grupos-cards').style.display = 'flex';
-        // Recargar tarjetas para actualizar conteo
-        renderGroupCards();
-    });
-
     // Botón Agregar Estudiante: LIMPIEZA COMPLETA
     if (addStudentBtn) {
         addStudentBtn.addEventListener('click', () => {
@@ -633,6 +708,72 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error(err);
                 alert("❌ Error de conexión.");
             }
+        });
+    }
+
+    const backToGroupsBtn = document.getElementById('back-to-groups');
+    if (backToGroupsBtn) backToGroupsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('grupo-students').style.display = 'none';
+        
+        if (currentView === 'cards') {
+            document.getElementById('grupos-cards').style.display = 'grid';
+            document.getElementById('all-students-list').style.display = 'none';
+            renderGroupCards();
+        } else {
+            document.getElementById('grupos-cards').style.display = 'none';
+            document.getElementById('all-students-list').style.display = 'block';
+        }
+    });
+
+    // --- VIEW TOGGLE LOGIC ---
+    const viewCardsBtn = document.getElementById('view-cards-btn');
+    const viewListBtn = document.getElementById('view-list-btn');
+    const cardsContainer = document.getElementById('grupos-cards');
+    const listContainer = document.getElementById('all-students-list');
+    const singleGroupContainer = document.getElementById('grupo-students');
+
+    if (viewCardsBtn && viewListBtn) {
+        viewCardsBtn.addEventListener('click', () => {
+            if (currentView === 'cards') return;
+            currentView = 'cards';
+            
+            viewCardsBtn.classList.add('active');
+            viewCardsBtn.style.background = '#fff';
+            viewCardsBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            viewCardsBtn.style.color = '#000';
+            
+            viewListBtn.classList.remove('active');
+            viewListBtn.style.background = 'transparent';
+            viewListBtn.style.boxShadow = 'none';
+            viewListBtn.style.color = '#666';
+
+            listContainer.style.display = 'none';
+            singleGroupContainer.style.display = 'none';
+            cardsContainer.style.display = 'grid';
+            
+            renderGroupCards();
+        });
+
+        viewListBtn.addEventListener('click', () => {
+            if (currentView === 'list') return;
+            currentView = 'list';
+
+            viewListBtn.classList.add('active');
+            viewListBtn.style.background = '#fff';
+            viewListBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            viewListBtn.style.color = '#000';
+
+            viewCardsBtn.classList.remove('active');
+            viewCardsBtn.style.background = 'transparent';
+            viewCardsBtn.style.boxShadow = 'none';
+            viewCardsBtn.style.color = '#666';
+
+            cardsContainer.style.display = 'none';
+            singleGroupContainer.style.display = 'none';
+            listContainer.style.display = 'block';
+
+            renderAllStudentsList();
         });
     }
 
