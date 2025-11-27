@@ -49,7 +49,13 @@ exports.getEstudianteDetails = async (req, res) => {
         const pagos = await Estudiante.getPaymentsByStudent(id);
         const representante = await Estudiante.getRepresentanteByStudent(id);
         const grupos = await Estudiante.getGroupsByStudent(id);
-        const deudas = await Estudiante.getDeudasByStudent(id);
+        
+        // --- CAMBIO AQUÍ ---
+        // Antes: const deudas = await Estudiante.getDeudasByStudent(id);
+        // Ahora usamos la función que calcula las mensualidades faltantes automáticamente:
+        const deudas = await Estudiante.getDebtsForStudent(id); 
+        // -------------------
+
         const solicitudes = await SolicitudPago.getSolicitudesByEstudiante(id);
 
         return res.json({ success: true, estudiante, pagos, representante, grupos, deudas, solicitudes });

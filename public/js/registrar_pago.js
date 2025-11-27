@@ -348,15 +348,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!mesReferencia) return alert('Por favor seleccione el Mes a pagar.');
             conceptoFinal = `Mensualidad ${mesReferencia}`;
         } 
+// ... código anterior dentro de handleSubmit ...
+
         else if (paymentType === 'deuda') {
             idDeudaSeleccionada = document.getElementById('pay-deuda-select').value;
             if (!idDeudaSeleccionada) return alert('Por favor seleccione una Deuda.');
+            
+            // --- LÓGICA MEJORADA PARA CAPTURAR EL GRUPO ---
             if (idDeudaSeleccionada.toString().startsWith('virtual_')) {
-                mesReferencia = idDeudaSeleccionada.split('virtual_')[1];
-                idDeudaSeleccionada = null;
+                // El formato del ID ahora es: virtual_IDGRUPO_AÑO-MES
+                const parts = idDeudaSeleccionada.split('_');
+                // parts[0] = 'virtual'
+                // parts[1] = ID DEL GRUPO
+                // parts[2] = FECHA (YYYY-MM)
+                
+                if (parts.length >= 3) {
+                    currentGroupId = parts[1]; // ¡Aquí capturamos el grupo correcto!
+                    mesReferencia = parts[2];
+                } else {
+                    // Fallback por si acaso tiene el formato viejo
+                    mesReferencia = parts[1];
+                }
+                
+                idDeudaSeleccionada = null; // Es virtual, no enviamos ID de deuda física
                 conceptoFinal = `Mensualidad ${mesReferencia}`;
             }
+            // ---------------------------------------------
         } 
+
+        // ... resto del código ...
         else if (paymentType === 'abono') {
             const desc = document.getElementById('pay-concepto-abono').value;
             if (!desc || desc.trim() === '') return alert('Por favor escriba el concepto del abono.');

@@ -106,15 +106,19 @@ exports.createPayment = async (req, res) => {
         });
 
         // 7. Control de Mensualidades
+// 7. Control de Mensualidades
         if (mesRef) {
             try {
-                const idGrupoControl = payload.idGrupo || null;
+                // Asegurarse de que idGrupo venga del payload (lo enviamos desde el JS en el paso anterior)
+                const idGrupoControl = payload.idGrupo || null; 
                 const [yearStr, monthStr] = mesRef.split('-');
                 const mesDateStr = `${mesRef}-01`;
 
+                // Usamos INSERT normal o ON DUPLICATE KEY UPDATE para mayor seguridad
                 await conn.promise().query(
-                    `INSERT IGNORE INTO control_mensualidades (idEstudiante, idPago, Mes, Year, Mes_date, idGrupo)
-                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    `INSERT INTO control_mensualidades (idEstudiante, idPago, Mes, Year, Mes_date, idGrupo)
+                    VALUES (?, ?, ?, ?, ?, ?) 
+                    ON DUPLICATE KEY UPDATE idPago = VALUES(idPago)`, 
                     [idEstudiante, idPago, parseInt(monthStr), parseInt(yearStr), mesDateStr, idGrupoControl]
                 );
             } catch (cmErr) {

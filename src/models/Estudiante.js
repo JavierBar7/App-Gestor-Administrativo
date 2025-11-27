@@ -292,82 +292,98 @@ class Estudiante {
         return rows && rows.length ? (Number(rows[0].Deuda_Pendiente) || 0) : 0;
     }
 
-    static async getDebtsForStudent(idEstudiante, idGrupo = null) {
+// ... código anterior en Estudiante.js ...
+
+    // LÓGICA MEJORADA: Calcula deuda por cada grupo inscrito individualmente
+    static async getDebtsForStudent(idEstudiante, idGrupoFiltro = null) {
         const now = new Date();
         const currentDay = now.getDate();
         
-        let inscripcionQuery = 'SELECT Fecha_inscripcion FROM inscripciones WHERE idEstudiante = ?';
-        let inscripcionParams = [idEstudiante];
-        
-        if (idGrupo !== null) {
-            inscripcionQuery += ' AND idGrupo = ?';
-            inscripcionParams.push(idGrupo);
-        }
-        inscripcionQuery += ' ORDER BY Fecha_inscripcion ASC LIMIT 1';
-        
-        const [est] = await conn.promise().query(inscripcionQuery, inscripcionParams);
+        // Obtenemos las deudas manuales (físicas) por si acaso, aunque para el cálculo automático 
+        // nos fiaremos más de la tabla de control_mensualidades por grupo.
         const deudasRegistradas = await Estudiante.getDeudasByStudent(idEstudiante);
-
         let deudasVirtuales = [];
-        if (est && est.length > 0) {
-            const fechaStr = new Date(est[0].Fecha_inscripcion).toISOString().slice(0, 10);
+
+        // 1. Obtener TODAS las inscripciones del estudiante con el nombre del grupo
+        let queryInsc = `
+            SELECT i.Fecha_inscripcion, i.idGrupo, g.Nombre_Grupo 
+            FROM inscripciones i
+            JOIN grupos g ON g.idGrupo = i.idGrupo
+            WHERE i.idEstudiante = ?
+        `;
+        const paramsInsc = [idEstudiante];
+
+        // Si se solicitó filtrar por un grupo específico
+        if (idGrupoFiltro !== null) {
+            queryInsc += ' AND i.idGrupo = ?';
+            paramsInsc.push(idGrupoFiltro);
+        }
+
+        const [inscripciones] = await conn.promise().query(queryInsc, paramsInsc);
+
+        // 2. Iterar por CADA grupo inscrito para generar su propia línea de cobro
+        for (const insc of inscripciones) {
+            if (!insc.Fecha_inscripcion) continue;
+
+            const fechaStr = new Date(insc.Fecha_inscripcion).toISOString().slice(0, 10);
             const fechaInicio = new Date(fechaStr + 'T12:00:00'); 
-            const fechaActual = new Date();
             const costoMensualidad = 30.00;
 
+            // Iterar mes a mes desde la fecha de inscripción DE ESTE GRUPO
             let iterador = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1, 12, 0, 0);
-            
+            const fechaActual = new Date(); // Hoy
+
             while (iterador <= fechaActual) {
                 const yearCheck = iterador.getFullYear();
                 const mesCheck = iterador.getMonth() + 1;
                 const mesClave = `${yearCheck}-${String(mesCheck).padStart(2, '0')}`;
 
-                let controlQuery = `SELECT cm.idControl FROM control_mensualidades cm
-                                    WHERE cm.idEstudiante = ? AND (
-                                        (cm.Mes = ? AND cm.Year = ?) OR DATE_FORMAT(cm.Mes_date, '%Y-%m') = ?
-                                    )`;
-                let controlParams = [idEstudiante, mesCheck, yearCheck, mesClave];
-                
-                if (idGrupo !== null) {
-                    controlQuery += ' AND cm.idGrupo = ?';
-                    controlParams.push(idGrupo);
-                }
-                
-                const [pagado] = await conn.promise().query(controlQuery, controlParams);
-
-                const deudaFisicaExiste = deudasRegistradas.find(d => {
-                    if (!d.Fecha_emision) return false;
-                    const f = new Date(d.Fecha_emision);
-                    const fClave = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}`;
-                    return fClave === mesClave;
-                });
+                // A. Verificar si existe pago para ESTE GRUPO en ESTE MES ESPECÍFICO
+                // (Es crucial filtrar por cm.idGrupo)
+                const [pagado] = await conn.promise().query(
+                    `SELECT cm.idControl FROM control_mensualidades cm
+                     WHERE cm.idEstudiante = ? 
+                     AND cm.idGrupo = ? 
+                     AND (
+                        (cm.Mes = ? AND cm.Year = ?) OR DATE_FORMAT(cm.Mes_date, '%Y-%m') = ?
+                     )`,
+                    [idEstudiante, insc.idGrupo, mesCheck, yearCheck, mesClave]
+                );
 
                 const esMesActual = mesClave === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                 const dentroGracia = esMesActual && currentDay <= 5;
 
-                if ((!pagado || pagado.length === 0) && !deudaFisicaExiste && !dentroGracia) {
+                // Si NO hay pago registrado y NO estamos en días de gracia, se genera la deuda
+                if ((!pagado || pagado.length === 0) && !dentroGracia) {
                     const nombreMes = iterador.toLocaleString('es-ES', { month: 'long' });
                     const mesCapitalizado = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
                     
                     deudasVirtuales.push({
-                        idDeuda: `virtual_${mesClave}`,
-                        Concepto: `Mensualidad ${mesCapitalizado}`,
+                        // ID único que combina el grupo y el mes para que no choquen
+                        idDeuda: `virtual_${insc.idGrupo}_${mesClave}`,
+                        // Concepto claro indicando el grupo
+                        Concepto: `Mensualidad ${mesCapitalizado} (${insc.Nombre_Grupo})`, 
                         Monto_usd: costoMensualidad.toFixed(4),
                         Total_Pagado: 0,
                         Fecha_emision: new Date(iterador),
                         Estado: 'Pendiente (Automática)',
                         esVirtual: true,
-                        mesRef: mesClave
+                        mesRef: mesClave,
+                        idGrupo: insc.idGrupo
                     });
                 }
+                // Avanzar al siguiente mes
                 iterador.setMonth(iterador.getMonth() + 1);
             }
         }
 
+        // Unir con las deudas manuales (si las hubiera) y ordenar por fecha
         const todasLasDeudas = [...deudasRegistradas, ...deudasVirtuales];
         todasLasDeudas.sort((a, b) => new Date(a.Fecha_emision) - new Date(b.Fecha_emision));
         return todasLasDeudas;
     }
+
+    // ... resto del código (getGroupDebtStatus, checkReferenceExists, etc) ...
 
     static async getGroupDebtStatus(idEstudiante, idGrupo) {
         try {
