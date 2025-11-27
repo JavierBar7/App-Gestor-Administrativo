@@ -63,13 +63,17 @@ const summaryGrupos = async (req, res) => {
     }
 };
 
+// ... imports al inicio del archivo ...
+
 const estudiantesPorGrupo = async (req, res) => {
     try {
-        const idGrupo = req.params.id;
+        const idGrupo = req.params.id; // El ID del grupo que estamos viendo (ej: Oratoria)
+        
+        // 1. Obtener estudiantes inscritos en este grupo
         const estudiantes = await Estudiante.findEstudiantesByGrupo(idGrupo);
 
         const mapped = await Promise.all(estudiantes.map(async (e) => {
-            // 1. Edad
+            // --- A. Edad ---
             let edad = null;
             if (e.Fecha_Nacimiento) {
                 const hoy = new Date();
@@ -79,14 +83,15 @@ const estudiantesPorGrupo = async (req, res) => {
                 if (m < 0 || (m === 0 && hoy.getDate() < fn.getDate())) edad--;
             }
 
-            // 2. Último Pago
+            // --- B. Último Pago (General) ---
             const lastPayment = await Estudiante.getLastPaymentTransaction(e.idEstudiante);
 
-            // 3. CÁLCULO DE DEUDA INTELIGENTE
+            // --- C. CÁLCULO DE DEUDA (ESTRICTO POR GRUPO) ---
             let deudaTotal = 0;
 
-            // A. Obtener TODAS las deudas (incluso las pagadas) para verificar el historial
-            // Hacemos una consulta directa aquí para tener el historial completo, no solo las pendientes
+            // 1. Deudas Físicas (Manuales)
+            // Nota: Las deudas manuales suelen ser generales, pero si se usan para este cálculo,
+            // idealmente deberían filtrarse si tuvieran idGrupo. Por ahora sumamos las pendientes generales.
             const [todasLasDeudas] = await conn.promise().query(
                 `SELECT idDeuda, Monto_usd, Fecha_emision, Estado, 
                  (COALESCE((SELECT SUM(Monto_usd) FROM pagos WHERE idDeuda = deudas.idDeuda), 0) + 
@@ -95,7 +100,6 @@ const estudiantesPorGrupo = async (req, res) => {
                 [e.idEstudiante]
             );
 
-            // Sumar saldo pendiente real de las deudas que NO están pagadas
             todasLasDeudas.forEach(d => {
                 if (d.Estado !== 'Pagada') {
                     const pendiente = Number(d.Monto_usd) - Number(d.Total_Pagado || 0);
@@ -103,8 +107,12 @@ const estudiantesPorGrupo = async (req, res) => {
                 }
             });
 
-            // B. Deudas Virtuales (Meses sin registro)
-            const [insc] = await conn.promise().query('SELECT Fecha_inscripcion FROM inscripciones WHERE idEstudiante = ? LIMIT 1', [e.idEstudiante]);
+            // 2. Deudas Virtuales (Automáticas) - AQUÍ ESTÁ LA CORRECCIÓN
+            // Buscamos la inscripción SOLO de este grupo
+            const [insc] = await conn.promise().query(
+                'SELECT Fecha_inscripcion FROM inscripciones WHERE idEstudiante = ? AND idGrupo = ? LIMIT 1', 
+                [e.idEstudiante, idGrupo]
+            );
             
             if (insc && insc.length > 0) {
                 const fechaStr = new Date(insc[0].Fecha_inscripcion).toISOString().slice(0, 10);
@@ -119,27 +127,33 @@ const estudiantesPorGrupo = async (req, res) => {
                     const yearCheck = iterador.getFullYear();
                     const mesClave = `${yearCheck}-${String(mesCheck).padStart(2, '0')}`;
 
-                    // 1. ¿Existe registro de solvencia?
+                    // VERIFICACIÓN ESTRICTA: ¿Existe pago para ESTE GRUPO en este mes?
                     const [pagado] = await conn.promise().query(
                         `SELECT idControl FROM control_mensualidades 
-                         WHERE idEstudiante = ? AND (
+                         WHERE idEstudiante = ? 
+                         AND idGrupo = ? 
+                         AND (
                             (Mes = ? AND Year = ?) OR DATE_FORMAT(Mes_date, '%Y-%m') = ?
                          )`,
-                        [e.idEstudiante, mesCheck, yearCheck, mesClave]
+                        [e.idEstudiante, idGrupo, mesCheck, yearCheck, mesClave]
                     );
 
-                    // 2. ¿Existe una deuda "física" para este mes (pagada o no)?
+                    // Verificamos si existe una deuda manual que cubra esta fecha (para evitar duplicados)
                     const existeDeudaFisica = todasLasDeudas.find(d => {
                         if(!d.Fecha_emision) return false;
                         const f = new Date(d.Fecha_emision);
                         return f.getFullYear() === yearCheck && (f.getMonth() + 1) === mesCheck;
                     });
 
-                    // Si NO está marcado solvente Y TAMPOCO existe una deuda registrada para este mes (ni pagada ni pendiente)
-                    // Entonces es una deuda virtual (el sistema asume que falta).
-                    // Si existeDeudaFisica es true, significa que ya la contamos arriba (si estaba pendiente) o ya se pagó (si estaba Pagada).
+                    // Si no hay pago REGISTRADO PARA ESTE GRUPO, sumamos la deuda
                     if ((!pagado || pagado.length === 0) && !existeDeudaFisica) {
-                        deudaTotal += costoMensualidad;
+                        // Verificación de días de gracia (opcional)
+                        const currentDay = fechaActual.getDate();
+                        const esMesActual = mesClave === `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}`;
+                        
+                        if (!esMesActual || currentDay > 5) {
+                             deudaTotal += costoMensualidad;
+                        }
                     }
                     iterador.setMonth(iterador.getMonth() + 1);
                 }
@@ -154,6 +168,8 @@ const estudiantesPorGrupo = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Error al obtener estudiantes' });
     }
 };
+
+// ... resto del archivo ...
 
 const updateGrupo = async (req, res) => {
     try {

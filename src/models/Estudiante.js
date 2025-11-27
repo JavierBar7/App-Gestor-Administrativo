@@ -385,6 +385,7 @@ class Estudiante {
 
     // ... resto del código (getGroupDebtStatus, checkReferenceExists, etc) ...
 
+    
     static async getGroupDebtStatus(idEstudiante, idGrupo) {
         try {
             const deudas = await Estudiante.getDebtsForStudent(idEstudiante, idGrupo);

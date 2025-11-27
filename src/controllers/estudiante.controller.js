@@ -63,7 +63,7 @@ exports.getEstudianteDetails = async (req, res) => {
         console.error('Error obteniendo detalles del estudiante:', err);
         return res.status(500).json({ success: false, message: 'Error al obtener detalles del estudiante' });
     }
-};
+};;
 
 exports.createEstudiante = async (req, res) => {
     try {

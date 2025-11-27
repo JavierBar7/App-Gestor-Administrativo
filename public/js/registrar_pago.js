@@ -350,6 +350,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         } 
 // ... código anterior dentro de handleSubmit ...
 
+// ... código anterior dentro de handleSubmit ...
+
+// ... código anterior dentro de handleSubmit ...
+
         else if (paymentType === 'deuda') {
             idDeudaSeleccionada = document.getElementById('pay-deuda-select').value;
             if (!idDeudaSeleccionada) return alert('Por favor seleccione una Deuda.');
@@ -375,6 +379,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             // ---------------------------------------------
         } 
+
+        // ... resto del código ...
+
+        // ... resto del código ...
 
         // ... resto del código ...
         else if (paymentType === 'abono') {
