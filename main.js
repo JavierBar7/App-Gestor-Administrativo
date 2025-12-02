@@ -21,6 +21,9 @@ function createWindow() {
     win.loadFile(path.join(__dirname, 'src/views/login.html'));
 }
 
+// NOTE: "Request Autofill.enable failed" errors in the console are benign warnings
+// from Chrome DevTools attempting to access unsupported Autofill features in Electron.
+// They can be safely ignored.
 // Esperar que Electron esté listo
 app.whenReady().then(() => {
     // 🚀 1️⃣ Iniciar el servidor Express automáticamente

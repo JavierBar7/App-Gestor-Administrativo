@@ -224,9 +224,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${edadDisplay}</td>
                 <td>${lastPayDisplay}</td>
                 <td style="text-align:center;">${debtDisplay}</td>
-                <td class="action-buttons-cell">
+                <td>
                     <button class="edit-student" data-id="${s.idEstudiante}">Editar</button>
-                    <button class="register-payment" data-id="${s.idEstudiante}">Registrar Pago</button>
+                    <button class="register-payment" data-id="${s.idEstudiante}" style="margin-left:8px;">Registrar Pago</button>
                 </td>
             `;
 
