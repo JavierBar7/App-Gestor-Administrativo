@@ -1,73 +1,103 @@
-    /* Estilos específicos para Deudores */
-        .debt-amount { color: #e74c3c; font-weight: bold; font-size: 1.1em; }
-        .btn-pay { 
-            background-color: #2980b9; 
-            color: white; 
-            border: none; 
-            padding: 8px 16px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .btn-pay:hover { 
-            background-color: #1c5980; 
-            transform: translateY(-1px); 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
+/* deudores.css - Estilos modernizados */
 
-        /* Report Buttons */
-        #btn-pdf, #btn-excel {
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            margin-right: 10px;
-            transition: all 0.3s ease;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-        }
+/* Estilos específicos para Deudores */
+.debt-amount { 
+    color: var(--danger-color); 
+    font-weight: 700; 
+    font-size: 1.1em; 
+}
 
-        #btn-pdf:hover, #btn-excel:hover {
-            background-color: #1c5980;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
-        }
-        
-        /* Estilo para el nombre clicable */
-        .clickable-name {
-            color: #0056b3;
-            text-decoration: underline;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .clickable-name:hover { color: #003d82; }
+.btn-pay { 
+    background-color: var(--primary-color); 
+    color: white; 
+    border: none; 
+    padding: 8px 16px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
 
-        /* Estilo para el botón de ver detalles */
-        .view-debt-details {
-            background: none;
-            border: 1px solid #ccc;
-            color: #555;
-            padding: 4px 10px;
-            border-radius: 15px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.2s;
-        }
-        .view-debt-details:hover {
-            background: #f0f0f0;
-            border-color: #999;
-            color: #333;
-        }
+.btn-pay:hover { 
+    background-color: var(--primary-dark); 
+    transform: translateY(-1px); 
+    box-shadow: var(--shadow-md);
+}
 
-        /* Alineación de la tabla principal */
-        /* La segunda columna (Información de la deuda) centrada encabezado y contenido */
-        #deudores-table-body tr td:nth-child(2), 
-        .user-table-container thead tr th:nth-child(2) {
-            text-align: center; 
-        }
+/* Report Buttons */
+#btn-pdf, #btn-excel {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-right: 10px;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
 
-        .modal-content.large { max-width: 800px; }
+#btn-pdf {
+    background-color: var(--danger-color);
+}
+
+#btn-excel {
+    background-color: var(--success-color);
+}
+
+#btn-pdf:hover, #btn-excel:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    opacity: 0.9;
+}
+
+/* Estilo para el nombre clicable */
+.clickable-name {
+    color: var(--primary-color);
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+.clickable-name:hover { 
+    color: var(--primary-dark); 
+    text-decoration: underline;
+}
+
+/* Estilo para el botón de ver detalles */
+.view-debt-details {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+.view-debt-details:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Alineación de la tabla principal */
+/* La segunda columna (Información de la deuda) centrada encabezado y contenido */
+#deudores-table-body tr td:nth-child(2), 
+.user-table-container thead tr th:nth-child(2) {
+    text-align: center; 
+}
+
+.modal-content.large { max-width: 900px; }
+
+/* Action buttons container in header */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}

@@ -354,9 +354,9 @@
                                 </button>
                             </td>
                             <td class="debt-amount">$${d.Deuda_Total}</td>
-                            <td>
+                            <td class="action-buttons-cell">
                                 <button class="btn-pay" onclick="irAPagar(${d.idEstudiante})">Registrar Pago</button>
-                                <button class="btn-pay" style="background-color: #e67e22; margin-left: 5px;" onclick="abrirModalCobro(${d.idEstudiante})">Registrar Cobro</button>
+                                <button class="btn-pay" style="background-color: #e67e22;" onclick="abrirModalCobro(${d.idEstudiante})">Registrar Cobro</button>
                             </td>
                         `;
               tableBody.appendChild(row);

@@ -1,51 +1,68 @@
-/* Styles specific to the Estudiantes view */
+/* estudiantes.css - Estilos modernizados */
 
 /* Group cards - Modern styling matching curso-card */
 .cards-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
+  gap: 30px;
   padding: 10px 0;
 }
 
 .group-card {
-  background-color: #ffffff;
+  background-color: var(--bg-card);
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-md);
   padding: 25px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all var(--transition-normal);
   display: flex;
   flex-direction: column;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  min-height: 140px;
+  min-height: 160px;
+  position: relative;
+  overflow: hidden;
+}
+
+.group-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background-color: var(--primary-color);
+    transition: width 0.3s ease;
 }
 
 .group-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-lg);
+}
+
+.group-card:hover::before {
+    width: 6px;
 }
 
 .group-card h4 {
   margin-top: 0;
-  color: #2c3e50;
-  font-size: 1.15em; /* Más pequeño que curso-card (1.4em) */
-  border-bottom: 2px solid #3498db;
-  padding-bottom: 10px;
+  color: var(--secondary-color);
+  font-size: 1.25em; 
+  border-bottom: 2px solid rgba(52, 152, 219, 0.2);
+  padding-bottom: 12px;
   margin-bottom: 15px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .group-card p {
-  margin: 6px 0;
-  padding: 4px 0;
-  color: #555;
+  margin: 8px 0;
+  padding: 0;
+  color: var(--text-muted);
   font-size: 0.95em;
   line-height: 1.5;
 }
 
 .group-card p b {
-  color: #2c3e50;
+  color: var(--secondary-color);
   font-weight: 600;
 }
 
@@ -58,18 +75,21 @@
   margin: 0;
   padding: 6px;
   background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   max-height: 200px;
   overflow: auto;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
 }
 #ins-grupo-suggestions li {
-  padding: 8px 10px;
+  padding: 10px 14px;
   cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
 #ins-grupo-suggestions li:hover {
   background: #f1f7ff;
+  color: var(--primary-color);
 }
 
 /* Selected groups chips */
@@ -77,28 +97,28 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 #ins-selected-grupos > div {
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 16px;
-  background: #f5f5f5;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: #f8f9fa;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-#ins-selected-grupos > div span {
-  font-size: 0.95em;
-  color: #333;
+  font-size: 0.9em;
+  color: var(--secondary-color);
 }
 #ins-selected-grupos > div button.remove-grupo-btn {
   background: transparent;
   border: none;
   cursor: pointer;
   font-weight: 700;
-  color: #900;
-  padding: 0 6px;
+  color: var(--danger-color);
+  padding: 0 4px;
+  font-size: 1.1em;
+  line-height: 1;
 }
 
 /* Student details modal - two-column layout adjustments */
@@ -109,38 +129,42 @@
 /* Payments table: align Mes and Grupo narrower */
 #det-pagos-table th:nth-child(2),
 #det-pagos-table td:nth-child(2) {
-  width: 90px;
+  width: 100px;
   text-align: center;
 }
 #det-pagos-table th:nth-child(4),
 #det-pagos-table td:nth-child(4) {
-  width: 140px;
+  width: 150px;
 }
 #det-pagos-table th,
 #det-pagos-table td {
-  padding: 10px 8px;
+  padding: 12px 15px;
 }
 
 /* Make the Detalles modal personal info two-column responsive */
 @media (max-width: 800px) {
   .modal-content.large {
-    padding: 20px;
+    padding: 25px;
   }
 }
 
 /* Billete rows styling inside payment modal */
 .billete-row input {
-  padding: 8px;
-  border: 1px solid #ddd;
+  padding: 10px;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
 }
 .billete-row button {
-  background: #e74c3c;
+  background: var(--danger-color);
   color: #fff;
   border: none;
-  padding: 6px 8px;
+  padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+.billete-row button:hover {
+    background-color: #c0392b;
 }
 
 /* Small helpers */
@@ -148,174 +172,9 @@
   position: relative;
 }
 
-/* Keep form grid spacing consistent - row-two should span both columns */
-.row-two {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 25px;
-  margin-top: 10px;
-}
-.row-two .input-group {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Modal and form styles (moved from gestion.css for estudiantes view) */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 9999;
-  left: 0 !important;
-  top: 0 !important;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-content {
-  background-color: #ffffff;
-  margin: 0;
-  padding: 35px 45px;
-  border: none;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 800px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
-}
-
-.modal-content h2 {
-  text-align: center;
-  margin-bottom: 30px;
-  color: #2c3e50;
-  font-size: 1.8em;
-  margin-top: 0;
-  font-weight: 700;
-}
-
-.close-button {
-  color: #aaa;
-  position: absolute;
-  right: 25px;
-  top: 20px;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: color 0.3s;
-}
-.close-button:hover {
-  color: #333;
-}
-
-/* Form layout for add-student modal */
-#add-student-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 25px;
-  row-gap: 18px;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0;
-}
-
-.input-group label {
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 6px;
-  font-size: 0.9em;
-  text-align: left;
-  display: block;
-  width: 100%;
-}
-
-.input-group input,
-.input-group select {
-  padding: 10px 14px;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  background-color: #fafafa;
-  transition: all 0.2s ease;
-  text-align: left;
-}
-
-.input-group input:focus,
-.input-group select:focus {
-  border-color: #2196f3;
-  background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
-  outline: none;
-}
-
-#add-student-form > div:nth-child(7) {
-  grid-column: span 2;
-}
-
-/* Representante section */
-#representante-section {
-  grid-column: span 2;
-  background-color: #f9fafb;
-  border: 1px solid #eee;
-  border-left: 5px solid #e74c3c;
-  padding: 20px;
-  border-radius: 8px;
-  margin-top: 10px;
-}
-
-#representante-section[style*="block"],
-#representante-section[style*="display: block"] {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-#representante-section h3 {
-  grid-column: span 2;
-  margin-top: 0;
-  color: #e74c3c;
-  text-align: left;
-  font-size: 1.1em;
-  font-weight: bold;
-  text-transform: uppercase;
-  border-bottom: 1px solid #ffebee;
-  padding-bottom: 10px;
-  margin-bottom: 15px;
-}
-
-/* Submit button in student modal */
-.modal button[type="submit"] {
-  background-color: #2980b9;
-  color: white;
-  padding: 14px;
-  border: none;
-  border-radius: 8px;
-  font-size: 1.1em;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  margin-top: 10px;
-  width: 100%;
-  transition: transform 0.2s, background-color 0.3s, box-shadow 0.2s;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.modal button[type="submit"]:hover {
-  background-color: #1c5980;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
-
 /* Add Student Button (Main View) */
 #add-student-btn {
-    background-color: #2980b9;
+    background-color: var(--primary-color);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -323,92 +182,64 @@
     font-size: 1em;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-md);
     transition: all 0.3s ease;
 }
 
 #add-student-btn:hover {
-    background-color: #1c5980;
+    background-color: var(--primary-dark);
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
-
-.error-message {
-  color: #e74c3c;
-  margin-top: 10px;
-  text-align: center;
-  font-size: 0.9em;
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-.error-message.visible {
-  visibility: visible;
-  opacity: 1;
-}
-
-@media (max-width: 600px) {
-  #add-student-form,
-  #representante-section[style*="block"] {
-    grid-template-columns: 1fr !important;
-  }
-  #add-student-form > div:nth-child(7),
-  #add-student-form > div:last-of-type,
-  #add-student-form button[type="submit"],
-  #representante-section h3 {
-    grid-column: span 1;
-  }
-  
-  .cards-container {
-    grid-template-columns: 1fr;
-  }
+    box-shadow: var(--shadow-lg);
 }
 
 /* Payment badges in students table */
 .payment-badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 12px;
-  font-size: 0.75em;
+  font-size: 0.8em;
   font-weight: 600;
-  margin-left: 4px;
+  margin-left: 6px;
 }
 
 .payment-badge.active {
-  background: #d4edda;
-  color: #155724;
+  background: rgba(39, 174, 96, 0.15);
+  color: var(--success-color);
+  border: 1px solid rgba(39, 174, 96, 0.2);
 }
 
 .payment-badge.warning {
-  background: #fff3cd;
-  color: #856404;
+  background: rgba(241, 196, 15, 0.15);
+  color: #d35400;
+  border: 1px solid rgba(241, 196, 15, 0.2);
 }
 
 .payment-badge.danger {
-  background: #f8d7da;
-  color: #721c24;
+  background: rgba(231, 76, 60, 0.15);
+  color: var(--danger-color);
+  border: 1px solid rgba(231, 76, 60, 0.2);
 }
 
 /* Etiquetas de Estado */
 .badge-status {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
     font-size: 0.85em;
     display: inline-block;
     text-align: center;
 }
 
 .badge-solvente {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background-color: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(39, 174, 96, 0.2);
 }
 
 .badge-deuda {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background-color: rgba(231, 76, 60, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(231, 76, 60, 0.2);
 }
 
 /* --- NUEVOS ESTILOS MODAL DETALLES --- */
@@ -418,33 +249,33 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 15px;
-    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 .modal-header-modern h2 {
     margin: 0;
-    color: #2c3e50;
-    font-size: 1.8rem;
+    color: var(--secondary-color);
+    font-size: 2rem;
 }
 
 /* Secciones */
 .detail-section {
     background: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-    border: 1px solid #f0f0f0;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
 }
 
 .section-title {
     font-size: 1.1rem;
-    color: #1565c0; /* Azul corporativo */
-    margin-bottom: 15px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #e3f2fd;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(41, 128, 185, 0.1);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -453,8 +284,8 @@
 /* Grid de Datos */
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px 25px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px 30px;
 }
 
 .info-item {
@@ -463,46 +294,46 @@
 }
 
 .info-label {
-    font-size: 0.8rem;
-    color: #888;
+    font-size: 0.85rem;
+    color: var(--text-muted);
     font-weight: 600;
     text-transform: uppercase;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .info-value {
-    font-size: 1rem;
-    color: #333;
+    font-size: 1.05rem;
+    color: var(--text-main);
     font-weight: 500;
 }
 
 /* Estilo especial para Representante */
 .representante-card {
-    background-color: #fafafa; /* Gris muy suave */
-    border-left: 4px solid #ff9800; /* Naranja */
+    background-color: #fafafa;
+    border-left: 4px solid var(--accent-color);
 }
 
 /* Tablas dentro del modal */
 .details-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    margin-top: 15px;
     font-size: 0.95rem;
 }
 
 .details-table th {
     background-color: #f8f9fa;
-    color: #555;
+    color: var(--secondary-color);
     font-weight: 600;
     text-align: left;
-    padding: 10px;
-    border-bottom: 2px solid #eee;
+    padding: 12px;
+    border-bottom: 2px solid var(--border-color);
 }
 
 .details-table td {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    color: #444;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
 }
 
 .details-table tr:last-child td {
@@ -511,60 +342,61 @@
 
 /* Badges para tablas */
 .status-badge {
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: bold;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
-.status-green { background: #e8f5e9; color: #2e7d32; }
-.status-red { background: #ffebee; color: #c62828; }
+.status-green { background: rgba(39, 174, 96, 0.1); color: var(--success-color); }
+.status-red { background: rgba(231, 76, 60, 0.1); color: var(--danger-color); }
 
 /* --- DOLLAR RATE SECTION --- */
 #tasa-input {
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.95em;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
     transition: border-color 0.3s;
+    background-color: #fff;
 }
 #tasa-input:focus {
-    border-color: #2980b9;
+    border-color: var(--primary-color);
     outline: none;
-    box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.1);
+    box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.1);
 }
 
 #tasa-save-btn {
-    background-color: #2980b9;
+    background-color: var(--primary-color);
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 10px 18px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 #tasa-save-btn:hover {
-    background-color: #1c5980;
+    background-color: var(--primary-dark);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-md);
 }
 
 #tasa-hist-btn {
     background-color: #95a5a6;
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 10px 18px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 #tasa-hist-btn:hover {
     background-color: #7f8c8d;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-md);
 }
 
 /* Back to Groups Button */
@@ -573,36 +405,36 @@
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 6px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 #back-to-groups:hover {
     background-color: #7f8c8d;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-md);
 }
 
 /* Action Buttons in Table */
 .edit-student, .register-payment {
-    background-color: #2980b9;
+    background-color: var(--primary-color);
     color: white;
     border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.9em;
     font-weight: 600;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .edit-student:hover, .register-payment:hover {
-    background-color: #1c5980;
+    background-color: var(--primary-dark);
     transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-md);
 }
