@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const searchInput = document.createElement('input');
             searchInput.type = 'text';
             searchInput.id = 'search-deudores';
-            searchInput.placeholder = 'Buscar por nombre...';
+            searchInput.placeholder = 'Buscar por nombre o cédula...';
             searchInput.style.cssText = 'width: 100%; max-width: 50%; padding: 10px 15px; border: 1.5px solid #e0e0e0; border-radius: 8px; font-size: 14px; transition: all 0.2s ease;';
             
             searchInput.addEventListener('focus', function() {
